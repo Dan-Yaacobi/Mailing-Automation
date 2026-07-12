@@ -1,0 +1,17 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <sys:String x:Key="Str_MainWindowTitle">בקשת הדפסה חדשה</sys:String>
+    <sys:String x:Key="Str_RequestDetailsSectionTitle">פרטי הבקשה</sys:String>
+    <sys:String x:Key="Str_RequestDetailsPlaceholder">כאן יופיעו שדות הבקשה: שם התכנית, סעיף תקציבי, מספר עותקים, חירור, דו צדדי, הידוק, דף פתיח ועוד</sys:String>
+    <sys:String x:Key="Str_AttachmentsSectionTitle">קבצים מצורפים</sys:String>
+    <sys:String x:Key="Str_AttachmentsPlaceholder">כאן תופיע רשימת הקבצים המצורפים, כולל מספר עמודים וסימון צבעוני/שחור-לבן לכל קובץ</sys:String>
+    <sys:String x:Key="Str_SendButton">שלח בקשה</sys:String>
+    <sys:String x:Key="Str_OpenConfirmationPreview">תצוגה מקדימה של חלון האישור</sys:String>
+    <sys:String x:Key="Str_ConfirmationTitle">אישור שליחת בקשה</sys:String>
+    <sys:String x:Key="Str_ConfirmationPlaceholder">כאן יופיע סיכום מלא של הבקשה, כולל כל שדה וכל קובץ מצורף, לפני השליחה בפועל</sys:String>
+    <sys:String x:Key="Str_ConfirmationBack">חזרה לעריכה</sys:String>
+    <sys:String x:Key="Str_ConfirmationConfirm">אישור ושליחה</sys:String>
+
+</ResourceDictionary>

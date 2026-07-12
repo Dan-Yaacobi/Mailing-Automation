@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Applies globally to every Window (MainWindow, ConfirmationDialog, any future
+        window) since FlowDirection and FontFamily are inherited properties: setting
+        them once here cascades down to all child elements without per-control setup.
+    -->
+    <Style TargetType="{x:Type Window}">
+        <Setter Property="FlowDirection" Value="RightToLeft" />
+        <Setter Property="FontFamily" Value="Segoe UI" />
+        <Setter Property="FontSize" Value="14" />
+    </Style>
+
+</ResourceDictionary>

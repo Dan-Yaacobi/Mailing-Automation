@@ -1,0 +1,37 @@
+<Window x:Class="PrintRequestApp.Views.ConfirmationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{DynamicResource Str_ConfirmationTitle}"
+        FlowDirection="RightToLeft"
+        Height="400" Width="500"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Text="{DynamicResource Str_ConfirmationTitle}"
+                   FontSize="18" FontWeight="Bold"
+                   Margin="0,0,0,16" />
+
+        <!-- Placeholder for the full request/attachment summary (§8.2 of docs/DESIGN.md) -->
+        <TextBlock Grid.Row="1"
+                   Text="{DynamicResource Str_ConfirmationPlaceholder}"
+                   TextWrapping="Wrap"
+                   Foreground="Gray"
+                   VerticalAlignment="Top" />
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,16,0,0">
+            <Button Content="{DynamicResource Str_ConfirmationConfirm}"
+                    Padding="12,6" Margin="0,0,8,0"
+                    Click="Confirm_Click" />
+            <Button Content="{DynamicResource Str_ConfirmationBack}"
+                    Padding="12,6"
+                    Click="Back_Click" />
+        </StackPanel>
+    </Grid>
+</Window>
