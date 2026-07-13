@@ -8,9 +8,9 @@
          every existing control app-wide with zero changes to any
          Window's markup, bindings, or event handlers.
          ============================================================ -->
-    <SolidColorBrush x:Key="AccentBrush" Color="#6366F1" />
-    <SolidColorBrush x:Key="AccentHoverBrush" Color="#4F46E5" />
-    <SolidColorBrush x:Key="AccentPressedBrush" Color="#4338CA" />
+    <SolidColorBrush x:Key="AccentBrush" Color="#9C21B7" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#841C9B" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#751989" />
     <SolidColorBrush x:Key="DisabledBrush" Color="#C7C9D9" />
     <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F4F6" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
