@@ -49,11 +49,16 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
                     <ControlTemplate.Resources>
-                        <!-- Overrides the app-wide TextBlock style (dark text) for the
-                             auto-generated TextBlock that hosts string Button.Content -
-                             a Style setter on that TextBlock otherwise beats the
-                             Foreground inherited from this Button, leaving text dark
-                             on the accent-colored background. -->
+                        <!-- RecognizesAccessKey="True" below means string Button.Content
+                             is actually rendered via an AccessText element, not a plain
+                             TextBlock - so it's AccessText's Foreground that needs the
+                             override (a Style setter on it otherwise beats the Foreground
+                             inherited from this Button, leaving text dark on the
+                             accent-colored background). Also override TextBlock in case
+                             any button content is an explicit TextBlock/other content. -->
+                        <Style TargetType="{x:Type AccessText}">
+                            <Setter Property="Foreground" Value="White" />
+                        </Style>
                         <Style TargetType="{x:Type TextBlock}">
                             <Setter Property="Foreground" Value="White" />
                         </Style>
