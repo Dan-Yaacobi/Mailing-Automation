@@ -195,13 +195,22 @@ design depends on their real values.
 
 ### 6.2 Word page counting — Word COM Interop (required by brief)
 
-Opens the document, calls `Document.Repaginate()`, then reads
-`Document.ComputedStatistics(wdStatisticPages)` for a live, accurate count
-(the cached statistics/built-in properties can be stale for documents that
-haven't been repaginated since last edit). Documents are opened with
-`Visible = false`, `ReadOnly = true`, and are always closed and COM-released
-in a `finally` block to avoid orphaned `WINWORD.EXE` processes accumulating
-on the requester's machine.
+Opens the document, calls `Document.Repaginate()` for an accurate, live
+count (the cached statistics/built-in properties can be stale for documents
+that haven't been repaginated since last edit), then reads
+`Application.Selection.Information(wdNumberOfPagesInDocument)` — a document
+opened via `Documents.Open` becomes the Application's active
+document/selection even when invisible, so this reflects the just-opened
+file. Documents are opened with `Visible = false`, `ReadOnly = true`, and
+are always closed and COM-released in a `finally` block to avoid orphaned
+`WINWORD.EXE` processes accumulating on the requester's machine.
+
+Originally attempted via `Document.ComputedStatistics(wdStatisticPages)`
+(the documented VBA API for this), but a real test machine showed COM
+automation doesn't expose that member at all —
+`'System.__ComObject' does not contain a definition for
+'ComputedStatistics'` — despite it being real, documented VBA surface.
+`Selection.Information` is the more reliably-automatable path.
 
 **Late-bound (no `Microsoft.Office.Interop.Word` PIA reference):** the
 compiled PIA pins a specific Office-version assembly dependency (`office,
