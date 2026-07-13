@@ -215,6 +215,15 @@ public partial class MainWindow : Window
 
         Debug.WriteLine($"=== בקשה נשלחה (בדיקה בלבד): {request.ProgramName}, {request.Attachments.Count} קבצים ===");
 
+        var colorPagesTotal = request.Attachments
+            .Where(a => a.ColorMode == Core.Models.ColorMode.Color)
+            .Sum(a => a.PageCount) * request.CopiesCount;
+        var blackAndWhitePagesTotal = request.Attachments
+            .Where(a => a.ColorMode == Core.Models.ColorMode.BlackAndWhite)
+            .Sum(a => a.PageCount) * request.CopiesCount;
+
+        Debug.WriteLine($"סה\"כ עמודים לשכפול (עמודים לקובץ × מספר עותקים) - צבעוני: {colorPagesTotal}, שחור-לבן: {blackAndWhitePagesTotal}");
+
         MessageBox.Show(
             this,
             "הבקשה נשלחה בהצלחה (בדיקה בלבד - טרם חובר backend אמיתי)",
