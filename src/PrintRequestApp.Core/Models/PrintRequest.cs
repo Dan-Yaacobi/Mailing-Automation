@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace PrintRequestApp.Core.Models;
@@ -6,6 +7,10 @@ namespace PrintRequestApp.Core.Models;
 // built once client-side validation passes (§4 of docs/DESIGN.md).
 public sealed class PrintRequest
 {
+    // Snapshot time of sending - drives which month/year sheet the Excel log
+    // writes to (§9.5 of docs/DESIGN.md).
+    public required DateTime SubmittedAt { get; init; }
+
     public required string ProgramName { get; init; }
 
     public required string BudgetLine { get; init; }

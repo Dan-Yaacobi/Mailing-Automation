@@ -195,6 +195,7 @@ public partial class MainWindow : Window
         var pageTypeText = (string)((ComboBoxItem)CmbPageType.SelectedItem).Content;
         var request = new Core.Models.PrintRequest
         {
+            SubmittedAt = DateTime.Now,
             ProgramName = TxtProgramName.Text,
             BudgetLine = TxtBudgetLine.Text,
             CopiesCount = copiesCount,

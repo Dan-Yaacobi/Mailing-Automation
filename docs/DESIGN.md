@@ -134,8 +134,8 @@ only animate at all because the UI thread stays free during the COM call.
 | `SlidesPerPage` | int? | (אם נשלח כ‑PPT) כמה שקפים בעמוד | only required/shown when at least one attachment is a PPT/PPTX |
 | `Notes` | string? | הערות נוספות | free-text, optional |
 | `Attachments` | `List<AttachmentItem>` | קבצים מצורפים | required, ≥ 1 item |
-| `SubmittedByDisplayName` / `SubmittedByEmail` | string | — | **not a form field.** Read automatically from the current Outlook session (`NameSpace.CurrentUser`) at submit time, used only for the Excel log / fallback email "requested by" column. No manual entry needed since Outlook already knows who is sending. |
-| `SubmittedAtUtc` | DateTime | — | set at submission time |
+| `SubmittedByDisplayName` / `SubmittedByEmail` | string | — | **not a form field, not yet implemented.** Will be read automatically from the current Outlook session (`NameSpace.CurrentUser`) at submit time once the Outlook phase is built, used only for the Excel log / fallback email "requested by" column. No manual entry needed since Outlook already knows who is sending. |
+| `SubmittedAt` | DateTime | — | **implemented** as local time (`DateTime.Now`), not UTC — simpler for a single-timezone internal tool, and it's what both a human reading the Excel log and the month/year sheet grouping (§9.5) need. Set at submission time |
 
 Color/B&W is intentionally **not** on this object — it lives per file on
 `AttachmentItem`, per the closed design decision in the brief.
@@ -472,22 +472,23 @@ Runs after the user confirms in the dialog:
 | true | false | false | "הבקשה נשלחה בהצלחה, אך גם עדכון האקסל וגם הודעת הגיבוי נכשלו." — plus the full request data rendered directly in the dialog with a copy-to-clipboard action, so the user can report it manually themselves. This double-failure edge case is rare but must never silently lose data. |
 | false | — | — | Hard failure — see §9.2 step 2. Submission did not happen; user can retry. |
 
-### 9.4 Excel write resilience (§9.2 step 4 detail)
+### 9.4 Excel write resilience (§9.2 step 4 detail) — **implemented**
 
-The shared file is a plain UNC/network path (§5), so it can be unreachable
-(drive not mounted), locked (someone has it open, or another submission is
-writing at the same instant), or simply not yet configured (placeholder
-path). `ExcelRequestWriter`:
+`ExcelRequestWriter` (`Core/Services/Excel`) takes a `filePath` directly
+(not yet read from `appsettings.json` — that wiring happens once this is
+connected into the live `Send` flow, not needed to build/test the writer
+in isolation):
 
 - Checks `File.Exists(path)` first; missing/unreachable path is treated as
-  an immediate failure (no point retrying a path that isn't there).
-- Wraps the open-append-save sequence in a small retry loop
-  (`Excel.WriteRetryAttempts` / `WriteRetryDelayMs` from config — short
-  delay, e.g. a few hundred ms, a few attempts) to ride out a transient
-  lock from a near-simultaneous write by another user.
-- Any exception surviving the retries (still locked, permissions, corrupt
-  file, disk full, etc.) is caught, logged, and reported as
-  `ExcelWriteSucceeded = false` — never thrown up to the UI.
+  an immediate failure (no point retrying a path that isn't there) —
+  returns `false`, never throws.
+- Wraps the open-append-save sequence in a retry loop (3 attempts, ~500ms
+  apart) that only retries on `IOException` specifically (the shape a
+  locked/in-use file throws) — other exceptions (corrupt file, permissions,
+  etc.) fail immediately without retrying.
+- Every failure path returns `false` rather than throwing, so the caller
+  (eventually `RequestSubmissionService`) can fall back to the
+  reconciliation email without the exception ever reaching the UI.
 - **Known limitation, called out rather than solved here:** ClosedXML
   read-modify-write against a shared file is not a true multi-writer-safe
   transaction — two submissions landing in the same short window could
@@ -495,22 +496,29 @@ path). `ExcelRequestWriter`:
   concurrent submissions turn out to be frequent in practice, a follow-up
   design (e.g. a tiny local write-queue service, or moving the log to
   something transactional) may be worth revisiting — not needed for v1.
+- Tested (`PrintRequestApp.Tests`) against a freshly-created dummy
+  workbook per test (not a real production file): correct sheet/row
+  creation, the `כללי` default, appending without clobbering existing
+  rows, a missing path, and a locked file (opened with `FileShare.None` in
+  the test to force the failure).
 
-### 9.5 Excel schema (one row per attachment, per requirements)
+### 9.5 Excel schema — **implemented, provisional pending a walkthrough with
+the actual spreadsheet owner**
+
+Scoped down from an earlier, richer draft of this section to exactly what's
+confirmed needed right now; revisit once that conversation happens. One
+worksheet per calendar month **and year** the request was submitted in
+(sheet name `"MM-yyyy"`, e.g. `"07-2026"`, created with a header row the
+first time a request lands in that month), one row per attachment:
 
 | Column | Source |
 |---|---|
-| תאריך ושעה | `SubmittedAtUtc` (local time) |
-| נשלח על ידי | `SubmittedByDisplayName` / email |
-| שם התכנית | `PrintRequest.ProgramName` |
+| תאריך | `PrintRequest.SubmittedAt` |
+| שם תכנית | `PrintRequest.ProgramName`, defaulting to `"כללי"` when blank — not every copy job is for a named program |
 | סעיף תקציבי | `PrintRequest.BudgetLine` |
-| מספר עותקים | `PrintRequest.CopiesCount` |
-| חירור / דו"צ / הידוק / סוג דף | request-level flags, repeated on every row for that request |
-| שקפים בעמוד | `PrintRequest.SlidesPerPage` (blank if not applicable) |
-| הערות נוספות | `PrintRequest.Notes` |
 | שם קובץ | `AttachmentItem.FileName` |
-| מספר עמודים | `AttachmentItem.PageCount` |
-| צבעוני / שחור-לבן | `AttachmentItem.ColorMode` |
+| סוג צבע | `AttachmentItem.ColorMode` (צבעוני / שחור-לבן) |
+| סה"כ עמודים | `AttachmentItem.PageCount × PrintRequest.CopiesCount` — the actual print/copy volume for that file, not just its page count |
 
 The fallback email (§9.2 step 5) carries the same row-per-attachment data,
 formatted as a readable table in the email body, so reconciling it into
