@@ -9,8 +9,8 @@
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="2*" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="1.2*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -98,12 +98,56 @@
             </ScrollViewer>
         </GroupBox>
 
-        <!-- Placeholder for the attachment list section (§8.1 of docs/DESIGN.md) -->
-        <GroupBox Grid.Row="2" Header="{DynamicResource Str_AttachmentsSectionTitle}" Margin="0,0,0,16">
-            <TextBlock Text="{DynamicResource Str_AttachmentsPlaceholder}"
-                       TextWrapping="Wrap"
-                       Foreground="Gray"
-                       Margin="8" />
+        <!-- Attachment list (§8.1 of docs/DESIGN.md). Add via browse or drag-and-drop;
+             PDF/PPTX page counts are detected automatically (§6.1/§6.3), Word is
+             manual-only until the COM-based counter is wired in a follow-up phase. -->
+        <GroupBox Grid.Row="2" Header="{DynamicResource Str_AttachmentsSectionTitle}" Margin="0,0,0,16"
+                  AllowDrop="True" DragEnter="Attachments_DragEnter" Drop="Attachments_Drop">
+            <DockPanel Margin="8">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                    <Button Content="{DynamicResource Str_AddFile}" Padding="10,4" Margin="0,0,8,0" Click="AddFile_Click" />
+                    <Button Content="{DynamicResource Str_MarkAllColor}" Padding="10,4" Margin="0,0,8,0" Click="MarkAllColor_Click" />
+                    <Button Content="{DynamicResource Str_MarkAllBlackAndWhite}" Padding="10,4" Click="MarkAllBlackAndWhite_Click" />
+                </StackPanel>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Text="{DynamicResource Str_DragDropHint}"
+                           Foreground="Gray" FontStyle="Italic" Margin="0,0,0,8" />
+
+                <DataGrid ItemsSource="{Binding Attachments}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserSortColumns="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{DynamicResource Str_Attach_FileName}"
+                                             Binding="{Binding FileName}" IsReadOnly="True" Width="2*" />
+                        <DataGridTextColumn Header="{DynamicResource Str_Attach_Detected}"
+                                             Binding="{Binding DetectedPageCountDisplay}" IsReadOnly="True" Width="1.3*" />
+                        <DataGridTextColumn Header="{DynamicResource Str_Attach_Manual}"
+                                             Binding="{Binding ManualPageCount, Mode=TwoWay}" Width="*" />
+                        <DataGridTemplateColumn Header="{DynamicResource Str_Attach_Color}" Width="1.4*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ComboBox SelectedIndex="{Binding ColorModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <ComboBoxItem Content="{DynamicResource Str_ColorOption}" />
+                                        <ComboBoxItem Content="{DynamicResource Str_BlackWhiteOption}" />
+                                    </ComboBox>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="{DynamicResource Str_Attach_Remove}" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="✕" Padding="6,2" Click="RemoveAttachment_Click" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
         </GroupBox>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left">

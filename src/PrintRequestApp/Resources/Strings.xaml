@@ -18,7 +18,17 @@
     <sys:String x:Key="Str_NoOption">לא</sys:String>
 
     <sys:String x:Key="Str_AttachmentsSectionTitle">קבצים מצורפים</sys:String>
-    <sys:String x:Key="Str_AttachmentsPlaceholder">כאן תופיע רשימת הקבצים המצורפים, כולל מספר עמודים וסימון צבעוני/שחור-לבן לכל קובץ</sys:String>
+    <sys:String x:Key="Str_AddFile">הוסף קובץ</sys:String>
+    <sys:String x:Key="Str_MarkAllColor">סמן הכל כצבעוני</sys:String>
+    <sys:String x:Key="Str_MarkAllBlackAndWhite">סמן הכל כשחור-לבן</sys:String>
+    <sys:String x:Key="Str_DragDropHint">ניתן לגרור קבצים לכאן, או להשתמש בכפתור "הוסף קובץ"</sys:String>
+    <sys:String x:Key="Str_Attach_FileName">שם קובץ</sys:String>
+    <sys:String x:Key="Str_Attach_Detected">עמודים שזוהו</sys:String>
+    <sys:String x:Key="Str_Attach_Manual">עריכה ידנית</sys:String>
+    <sys:String x:Key="Str_Attach_Color">צבעוני / שחור-לבן</sys:String>
+    <sys:String x:Key="Str_Attach_Remove">הסר</sys:String>
+    <sys:String x:Key="Str_ColorOption">צבעוני</sys:String>
+    <sys:String x:Key="Str_BlackWhiteOption">שחור-לבן</sys:String>
     <sys:String x:Key="Str_SendButton">שלח בקשה</sys:String>
     <sys:String x:Key="Str_OpenConfirmationPreview">תצוגה מקדימה של חלון האישור</sys:String>
     <sys:String x:Key="Str_ConfirmationTitle">אישור שליחת בקשה</sys:String>
