@@ -43,19 +43,23 @@ public sealed class WordPageCounter : IPageCounter
             wordApp!.Visible = false;
             wordApp.DisplayAlerts = WdAlertsNone;
 
+            // Deliberately not passing Visible:false here (only Application.Visible
+            // above suppresses on-screen rendering) - passing it to Open too appears
+            // to suppress creation of the document's own window entirely, leaving
+            // Selection null (confirmed by a real "cannot perform runtime binding on
+            // a null reference" failure with it set).
             document = wordApp.Documents.Open(
                 filePath,
                 ConfirmConversions: false,
                 ReadOnly: true,
-                AddToRecentFiles: false,
-                Visible: false);
+                AddToRecentFiles: false);
 
             // Repaginate() first guarantees an accurate, live count rather than a
             // possibly-stale cached one (§6.2 of docs/DESIGN.md), then read the page
-            // count off the active selection - a document opened via Documents.Open
-            // becomes the Application's active document/selection even when invisible.
+            // count off this document's own window/selection - more robust than the
+            // Application's "currently active" selection.
             document.Repaginate();
-            return (int)wordApp.Selection.Information(WdNumberOfPagesInDocument);
+            return (int)document.ActiveWindow.Selection.Information(WdNumberOfPagesInDocument);
         }
         catch (Exception ex)
         {

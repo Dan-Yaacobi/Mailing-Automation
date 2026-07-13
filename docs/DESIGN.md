@@ -198,11 +198,13 @@ design depends on their real values.
 Opens the document, calls `Document.Repaginate()` for an accurate, live
 count (the cached statistics/built-in properties can be stale for documents
 that haven't been repaginated since last edit), then reads
-`Application.Selection.Information(wdNumberOfPagesInDocument)` — a document
-opened via `Documents.Open` becomes the Application's active
-document/selection even when invisible, so this reflects the just-opened
-file. Documents are opened with `Visible = false`, `ReadOnly = true`, and
-are always closed and COM-released in a `finally` block to avoid orphaned
+`Document.ActiveWindow.Selection.Information(wdNumberOfPagesInDocument)`.
+Documents are opened `ReadOnly = true` with `Application.Visible = false`
+(suppresses on-screen rendering) — but *not* also passing `Visible:false` to
+`Documents.Open` itself, since that appears to suppress creation of the
+document's own window entirely, leaving `Selection` null (confirmed by a
+real "cannot perform runtime binding on a null reference" failure). Always
+closed and COM-released in a `finally` block to avoid orphaned
 `WINWORD.EXE` processes accumulating on the requester's machine.
 
 Originally attempted via `Document.ComputedStatistics(wdStatisticPages)`
