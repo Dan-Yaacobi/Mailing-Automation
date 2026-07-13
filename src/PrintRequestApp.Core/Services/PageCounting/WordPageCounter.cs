@@ -23,6 +23,12 @@ public sealed class WordPageCounter : IPageCounter
     // definition for 'ComputedStatistics'") despite being the documented VBA API.
     private const int WdNumberOfPagesInDocument = 4;
 
+    // WdViewType.wdPrintView - page count is fundamentally a Print Layout concept;
+    // repaginating in another view (e.g. the document was last saved in Draft/Web
+    // Layout) doesn't reliably compute the same page breaks a person printing it
+    // would see.
+    private const int WdPrintView = 3;
+
     public FileKind SupportedKind => FileKind.Word;
 
     public int? TryCountPages(string filePath)
@@ -53,6 +59,11 @@ public sealed class WordPageCounter : IPageCounter
                 ConfirmConversions: false,
                 ReadOnly: true,
                 AddToRecentFiles: false);
+
+            // Force Print Layout before repaginating, so page breaks are computed the
+            // way they'd actually print regardless of which view the document was
+            // last saved/opened in.
+            document.ActiveWindow.View.Type = WdPrintView;
 
             // Repaginate() first guarantees an accurate, live count rather than a
             // possibly-stale cached one (§6.2 of docs/DESIGN.md), then read the page
