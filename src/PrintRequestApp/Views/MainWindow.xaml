@@ -99,8 +99,8 @@
         </GroupBox>
 
         <!-- Attachment list (§8.1 of docs/DESIGN.md). Add via browse or drag-and-drop;
-             PDF/PPTX page counts are detected automatically (§6.1/§6.3), Word is
-             manual-only until the COM-based counter is wired in a follow-up phase. -->
+             page counts are detected automatically for PDF, PPTX (§6.1/§6.3), and Word
+             (§6.2, via COM interop - requires Word installed on this machine). -->
         <GroupBox Grid.Row="2" Header="{DynamicResource Str_AttachmentsSectionTitle}" Margin="0,0,0,16"
                   AllowDrop="True" DragEnter="Attachments_DragEnter" Drop="Attachments_Drop">
             <DockPanel Margin="8">

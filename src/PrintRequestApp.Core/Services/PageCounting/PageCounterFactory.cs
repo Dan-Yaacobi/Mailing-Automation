@@ -13,13 +13,13 @@ public sealed class PageCounterFactory
         _counters = counters.ToList();
     }
 
-    /// <summary>PDF and PPTX only for now - Word is wired via COM interop in a follow-up phase.</summary>
     public static PageCounterFactory CreateDefault()
     {
         return new PageCounterFactory(new IPageCounter[]
         {
             new PdfPageCounter(),
-            new PptxSlideCounter()
+            new PptxSlideCounter(),
+            new WordPageCounter()
         });
     }
 
