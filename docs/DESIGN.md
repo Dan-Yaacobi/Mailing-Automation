@@ -32,10 +32,10 @@ computes/validates page counts per file, and on submit:
 | Concern | Choice |
 |---|---|
 | UI framework | WPF, **.NET 8 (net8.0-windows)** |
-| MVVM | CommunityToolkit.Mvvm (source-generator based, MIT license, no heavy dependency) |
-| Outlook automation | `Microsoft.Office.Interop.Outlook` (COM interop) |
-| Word page counting | `Microsoft.Office.Interop.Word` (COM interop) |
-| PDF page counting | PdfPig (see §6.1) |
+| MVVM | Hand-written `INotifyPropertyChanged` view models for now (e.g. `AttachmentItemViewModel`) - simpler to get right without a build environment to verify source-generator output against; CommunityToolkit.Mvvm remains an option if hand-written boilerplate grows unwieldy |
+| Outlook automation | COM interop, likely late-bound (`Type.GetTypeFromProgID` + `dynamic`) given the PIA-version fragility found while wiring Word - to be confirmed when this phase is built |
+| Word page counting | Late-bound COM interop (`Type.GetTypeFromProgID("Word.Application")` + `dynamic`/`IDispatch`), not a compiled `Microsoft.Office.Interop.Word` PIA reference - see §6.2 |
+| PDF page counting | PdfSharp (see §6.1) |
 | PPTX slide counting | DocumentFormat.OpenXml (Open XML SDK) |
 | Excel writing | ClosedXML (see §6.4) |
 | Config | JSON file (`appsettings.json`) next to the executable |
@@ -108,12 +108,15 @@ DependencyInjection`, set up in `App.xaml.cs`).
 ### Threading note for Office COM
 
 Office COM objects are single-threaded apartment (STA). The WPF UI thread
-is already STA, so short COM calls can run there, but page-counting a batch
-of Word documents or sending mail should not block the UI. The design runs
-these operations on a dedicated background thread that is explicitly
-created with `ApartmentState.STA` (not the default MTA thread pool), with
-the ViewModel awaiting a `TaskCompletionSource` bridged from that thread.
-The UI shows a busy indicator during these calls (see §8).
+is already STA, so short COM calls can run there, but page-counting (Word
+in particular, which spins up a real `WINWORD.EXE` process) should not
+block the UI. **Implemented**: attachment page counting runs on a
+dedicated background thread explicitly created with `ApartmentState.STA`
+(not the default MTA thread pool), bridged back via a
+`TaskCompletionSource` that the UI `await`s. A full-window overlay (a
+rotating ring + status text naming the file currently being processed) is
+shown for the duration and blocks input to the rest of the form — it can
+only animate at all because the UI thread stays free during the COM call.
 
 ## 4. Data Model
 
@@ -137,18 +140,30 @@ The UI shows a busy indicator during these calls (see §8).
 Color/B&W is intentionally **not** on this object — it lives per file on
 `AttachmentItem`, per the closed design decision in the brief.
 
-### `AttachmentItem` (one per attached file)
+### `AttachmentItem` — two forms, mutable while editing vs. immutable at submit
+
+**`AttachmentItemViewModel`** (WPF project, `INotifyPropertyChanged`) — the
+mutable, bindable form backing the attachment grid while the user is still
+editing:
 
 | Field | Type | Notes |
 |---|---|---|
 | `FilePath` | string | full path to the original file on disk |
 | `FileName` | string | derived, shown in UI |
 | `FileKind` | enum `{ Pdf, Word, PowerPoint }` | derived from extension |
-| `DetectedPageCount` | int? | result of auto-detection; `null` if detection failed or isn't supported for the file type |
-| `DetectionSucceeded` | bool | drives the "לא זוהה אוטומטית" UI hint |
-| `ManualPageCount` | int? | set when the user edits the count; `null` until touched |
-| `EffectivePageCount` | int (computed) | `ManualPageCount ?? DetectedPageCount`; submission is blocked if this is null (user must supply a number when auto-detection fails) |
-| `ColorMode` | enum `{ Color, BlackAndWhite }?` | **required, no default.** Starts unset so the user must make an explicit, visible choice for every file (backed by the "mark all" buttons for speed) rather than silently inheriting a default that could be wrong |
+| `DetectedPageCount` | int? | result of auto-detection; `null` if detection failed or isn't supported for the file type. Kept internally to compare against, not shown as its own column |
+| `PageCount` | int? | **the single field the user sees and edits**, pre-filled with `DetectedPageCount` when detection succeeds (empty otherwise). Revised from an earlier two-column "detected display + separate manual override" design, which read as confusing/unintuitive in testing - one editable value is simpler to reason about than two related-but-separate numbers. Submission is blocked if this is null (user must supply a number when auto-detection fails) |
+| `PageCountStatus` | string (computed) | read-only companion label next to the editable field: "זוהה אוטומטית" if `PageCount == DetectedPageCount` and non-null, "הוזן ידנית" if the user changed/entered it, "⚠ יש להזין מספר עמודים" (shown in red/bold) if still null |
+| `ColorMode` | enum `{ Color, BlackAndWhite }` | **Defaults to `BlackAndWhite`** for every newly-attached file (revised from the original "no default" decision after hands-on UI testing showed an empty selector reads as broken rather than deliberate). Still overridable per file, and via the "mark all" buttons |
+
+**`Core.Models.AttachmentItem`** (Core project, immutable) — a plain
+submission-time snapshot built via `AttachmentItemViewModel.ToAttachmentItem()`
+once `Send` validation has confirmed `PageCount` and `ColorMode` are both set:
+`FilePath`, `FileName`, `FileKind`, `PageCount` (non-nullable `int` here — no
+longer optional once snapshotted), `ColorMode` (non-nullable). This is the
+form `PrintRequest.Attachments` holds and what the confirmation dialog and
+(eventually) the Excel/email writers consume — keeping it a plain, immutable
+POCO in Core rather than reusing the WPF ViewModel directly.
 
 ### `SubmissionResult` (returned by the submit flow, drives the result screen)
 
@@ -186,25 +201,46 @@ design depends on their real values.
 
 ## 6. Library Choices & Tradeoffs
 
-### 6.1 PDF page counting — **PdfPig**
+### 6.1 PDF page counting — **PdfSharp**
 
 | Option | Verdict |
 |---|---|
-| **PdfPig** (chosen) | Pure managed C#, Apache 2.0, no native/COM dependency, actively maintained, reads page count cheaply without rendering. Read-only (fine — we only need page count). |
-| PdfSharp | Primarily a PDF *creation* library; its reading support is weaker for malformed/encrypted/scanned PDFs, which real-world requester files will include. |
+| **PdfSharp** (chosen) | MIT-licensed, mature, actively-versioned (6.x targets .NET 6/8), cross-platform. `PdfReader.Open(path, PdfDocumentOpenMode.InformationOnly)` + `.PageCount` reads the page count cheaply without parsing content streams. |
+| PdfPig | Originally chosen (pure managed, no COM), but **dropped**: it currently has no stable NuGet release at all, and the only available prerelease build (`0.1.9-alpha001-patch1`) threw `FileNotFoundException` from inside its own DLL on every real PDF tested. Not usable as of this writing. |
 | iText7 | Very capable, but AGPL-licensed unless a commercial license is purchased — a licensing complication this internal tool doesn't need. |
 
 ### 6.2 Word page counting — Word COM Interop (required by brief)
 
-Uses `Microsoft.Office.Interop.Word`: open the document, call
-`Document.Repaginate()` then read
-`Document.ComputedStatistics(WdStatistic.wdStatisticPages)` for a live,
-accurate count (the cached `Document.ComputedStatistics` / built-in
-properties can be stale for documents that haven't been repaginated since
-last edit). Documents are opened with `Visible = false`,
-`ReadOnly = true`, and are always closed and COM-released in a `finally`
-block to avoid orphaned `WINWORD.EXE` processes accumulating on the
-requester's machine.
+Opens the document, calls `Document.Repaginate()` for an accurate, live
+count (the cached statistics/built-in properties can be stale for documents
+that haven't been repaginated since last edit), then reads
+`Document.ActiveWindow.Selection.Information(wdNumberOfPagesInDocument)`.
+Documents are opened `ReadOnly = true` with `Application.Visible = false`
+(suppresses on-screen rendering) — but *not* also passing `Visible:false` to
+`Documents.Open` itself, since that appears to suppress creation of the
+document's own window entirely, leaving `Selection` null (confirmed by a
+real "cannot perform runtime binding on a null reference" failure). Always
+closed and COM-released in a `finally` block to avoid orphaned
+`WINWORD.EXE` processes accumulating on the requester's machine.
+
+Originally attempted via `Document.ComputedStatistics(wdStatisticPages)`
+(the documented VBA API for this), but a real test machine showed COM
+automation doesn't expose that member at all —
+`'System.__ComObject' does not contain a definition for
+'ComputedStatistics'` — despite it being real, documented VBA surface.
+`Selection.Information` is the more reliably-automatable path.
+
+**Late-bound (no `Microsoft.Office.Interop.Word` PIA reference):** the
+compiled PIA pins a specific Office-version assembly dependency (`office,
+Version=15.0.0.0`) that isn't guaranteed to be resolvable at runtime — this
+surfaced as an unhandled `FileNotFoundException` on a real test machine,
+and is a fragile approach in general for an internal tool that may run
+against different installed Office versions across different users'
+machines. Instead, `WordPageCounter` gets the COM type via
+`Type.GetTypeFromProgID("Word.Application")`, creates it with
+`Activator.CreateInstance`, and drives it entirely through `dynamic`
+(late-bound `IDispatch` calls) — this works against whatever Word version
+is actually installed, with zero compile-time assembly-version dependency.
 
 ### 6.3 PPTX slide counting — Open XML SDK (required by brief)
 
@@ -299,7 +335,7 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 
 ```
 ┌───────────────────────────────────────────────┐
-│                בקשת הדפסה חדשה                  │
+│                בקשת שכפול חדשה                  │
 ├───────────────────────────────────────────────┤
 │  פרטי הבקשה                                     │
 │  שם התכנית:        [___________]                │
@@ -324,34 +360,50 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 └───────────────────────────────────────────────┘
 ```
 
-- The attachment grid: each row shows file name, the auto-detected page
-  count (or "לא זוהה אוטומטית — נא להזין ידנית" if detection failed), an
-  editable numeric field for the manual override, a required Color/B&W
-  toggle (two mutually exclusive buttons, unset by default — visually
-  flagged, e.g. red outline, until the user picks one), and a remove
-  button.
+- The attachment grid: each row shows file name, a single editable page-count
+  field (pre-filled from auto-detection when it succeeds), a read-only status
+  label next to it ("זוהה אוטומטית" / "הוזן ידנית" / a red "⚠ יש להזין מספר
+  עמודים" when still empty), a Color/B&W selector defaulting to B&W for every
+  newly-attached file, and a remove button.
 - "סמן הכל כצבעוני" / "סמן הכל כשחור-לבן" set `ColorMode` on every current
   attachment in one click; still overridable per row afterward.
-- "שלח בקשה" is disabled (with inline validation messages explaining why)
-  until: all required request-level fields are filled, at least one file
-  is attached, every attachment has an explicit `ColorMode`, and every
-  attachment has a resolvable `EffectivePageCount`.
+- "שלח בקשה" validates before submitting: at least one file attached, and
+  every attachment has a resolvable `PageCount` (detected or manually
+  entered) — otherwise it shows an error listing which files still need a
+  page count, rather than sending an incomplete request.
+- While a newly-added file's page count is being detected, a full-window
+  overlay (rotating ring + "מזהה מספר עמודים: {file name}") covers the form
+  and blocks input until it's done — added specifically because Word
+  counting can take several real seconds and an unresponsive-looking window
+  otherwise reads as frozen.
 
 ### 8.2 Confirmation Dialog
 
-Modal, opened when "שלח בקשה" is clicked and validation passes. Three
-internal states within the same dialog (avoids stacking multiple popups):
+Modal, opened when "שלח בקשה" is clicked and validation passes, built from
+the `PrintRequest` object (not a pre-formatted string) so every field and
+attachment renders as its own set of elements rather than one concatenated
+block of text — mixing Hebrew, numbers, and Latin file names in a single
+text run is what caused visibly jumbled rendering in an earlier version.
+Request-level fields are a label/value grid (one row per field); attachments
+are a list, one row each, with file name / page count / color mode as
+separate `TextBlock`s in a `Grid` row (not a `StackPanel`, so a long file
+name wraps in its own bounded column instead of silently clipping).
 
-1. **Review** — read-only rendering of the entire `PrintRequest`: every
-   request-level field with its Hebrew label and current value, then a
-   table of every attachment (file name, effective page count, whether it
-   was auto-detected or manually entered, color/B&W). Two buttons:
-   "חזרה לעריכה" (back to the form, no data lost) and "אישור ושליחה"
-   (confirm & send).
-2. **Sending** — shown after confirm is clicked; buttons disabled, a busy
-   indicator and status text ("שולח הודעת דוא"ל…", then "מעדכן את קובץ
-   האקסל…") reflecting the orchestration steps in §9 as they happen.
-3. **Result** — final state, message driven by `SubmissionResult` (see
+**Currently implemented: only the Review state below** — there's no
+Outlook/Excel backend yet (that's a later phase), so confirming just shows
+a plain "sent" acknowledgement. The two additional states are the intended
+design for once that backend exists:
+
+1. **Review** *(implemented)* — read-only rendering of the entire
+   `PrintRequest`: every request-level field with its Hebrew label and
+   current value, then a row per attachment (file name, page count,
+   color/B&W). Two buttons: "חזרה לעריכה" (back to the form, no data lost)
+   and "אישור ושליחה" (confirm & send).
+2. **Sending** *(not yet built)* — shown after confirm is clicked; buttons
+   disabled, a busy indicator and status text ("שולח הודעת דוא"ל…", then
+   "מעדכן את קובץ האקסל…") reflecting the orchestration steps in §9 as they
+   happen.
+3. **Result** *(not yet built)* — final state, message driven by `SubmissionResult` (see
    §9.3 for the exact message matrix), with a "סגור" (close) button that
    returns to a blank form for the next request on success, or stays open
    on the filled form on hard failure so the user can retry.
@@ -367,7 +419,9 @@ internal states within the same dialog (avoids stacking multiple popups):
   if at least one is, it's required and must be ≥ 1.
 - `Notes` is optional, no validation.
 - At least one attachment present.
-- Every attachment has `ColorMode` set and a non-null `EffectivePageCount`.
+- Every attachment has a non-null `PageCount` (blocks submission with
+  an error listing the offending files otherwise); `ColorMode` always has a
+  value since it defaults to `BlackAndWhite`.
 
 ### 9.2 Orchestration (`RequestSubmissionService.SubmitAsync`)
 
@@ -377,7 +431,7 @@ Runs after the user confirms in the dialog:
 1. Read current Outlook user (NameSpace.CurrentUser) → SubmittedByDisplayName/Email
 2. Compose & send primary email via OutlookEmailService
    - To: config.Recipient.PrimaryEmail
-   - Subject: "בקשת הדפסה - {ProgramName}"
+   - Subject: "בקשת שכפול - {ProgramName}"
    - HTML body, RTL (dir="rtl"), containing every request-level field and,
      per attached file, its name and color/B&W setting.
      Page counts are NOT included in this email — the person printing acts
@@ -455,7 +509,7 @@ path). `ExcelRequestWriter`:
 | שקפים בעמוד | `PrintRequest.SlidesPerPage` (blank if not applicable) |
 | הערות נוספות | `PrintRequest.Notes` |
 | שם קובץ | `AttachmentItem.FileName` |
-| מספר עמודים | `AttachmentItem.EffectivePageCount` |
+| מספר עמודים | `AttachmentItem.PageCount` |
 | צבעוני / שחור-לבן | `AttachmentItem.ColorMode` |
 
 The fallback email (§9.2 step 5) carries the same row-per-attachment data,
@@ -466,7 +520,7 @@ Excel by hand is a direct copy.
 
 | Failure | Handling |
 |---|---|
-| Word not installed / COM fails when counting a Word file | `DetectionSucceeded = false`, `DetectedPageCount = null`; UI shows "לא זוהה אוטומטית", user must type a page count manually. Does not block submission. |
+| Word not installed / COM fails when counting a Word file | `DetectedPageCount = null`; `PageCount` starts empty, `PageCountStatus` shows the red "⚠ יש להזין מספר עמודים" hint, user must type a page count manually. Does not block submission by itself (only an actually-empty `PageCount` at send time blocks). |
 | PDF unreadable/corrupt/encrypted | Same pattern — detection failure, manual entry required. |
 | PPTX slide count fails (corrupt file) | Same pattern. |
 | Legacy `.ppt` attached | Not auto-detected (§6.3); same manual-entry pattern. |

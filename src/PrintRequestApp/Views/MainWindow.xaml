@@ -9,8 +9,8 @@
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="2*" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="1.2*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
@@ -98,21 +98,116 @@
             </ScrollViewer>
         </GroupBox>
 
-        <!-- Placeholder for the attachment list section (§8.1 of docs/DESIGN.md) -->
-        <GroupBox Grid.Row="2" Header="{DynamicResource Str_AttachmentsSectionTitle}" Margin="0,0,0,16">
-            <TextBlock Text="{DynamicResource Str_AttachmentsPlaceholder}"
-                       TextWrapping="Wrap"
-                       Foreground="Gray"
-                       Margin="8" />
+        <!-- Attachment list (§8.1 of docs/DESIGN.md). Add via browse or drag-and-drop;
+             page counts are detected automatically for PDF, PPTX (§6.1/§6.3), and Word
+             (§6.2, via COM interop - requires Word installed on this machine). -->
+        <GroupBox Grid.Row="2" Header="{DynamicResource Str_AttachmentsSectionTitle}" Margin="0,0,0,16"
+                  AllowDrop="True" DragEnter="Attachments_DragEnter" Drop="Attachments_Drop">
+            <DockPanel Margin="8">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+                    <Button Content="{DynamicResource Str_AddFile}" Padding="10,4" Margin="0,0,8,0" Click="AddFile_Click" />
+                    <Button Content="{DynamicResource Str_MarkAllColor}" Padding="10,4" Margin="0,0,8,0" Click="MarkAllColor_Click" />
+                    <Button Content="{DynamicResource Str_MarkAllBlackAndWhite}" Padding="10,4" Click="MarkAllBlackAndWhite_Click" />
+                </StackPanel>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Text="{DynamicResource Str_DragDropHint}"
+                           Foreground="Gray" FontStyle="Italic" Margin="0,0,0,8" />
+
+                <DataGrid ItemsSource="{Binding Attachments}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserSortColumns="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{DynamicResource Str_Attach_FileName}"
+                                             Binding="{Binding FileName}" IsReadOnly="True" Width="2*" />
+                        <DataGridTemplateColumn Header="{DynamicResource Str_Attach_PageCount}" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding PageCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, TargetNullValue=''}"
+                                             FlowDirection="LeftToRight" TextAlignment="Right"
+                                             VerticalContentAlignment="Center" Margin="2"
+                                             PreviewTextInput="NumericTextBox_PreviewTextInput" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="{DynamicResource Str_Attach_PageCountStatus}"
+                                             Binding="{Binding PageCountStatus}" IsReadOnly="True" Width="1.6*">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="VerticalAlignment" Value="Center" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PageCount}" Value="{x:Null}">
+                                            <Setter Property="Foreground" Value="Red" />
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Header="{DynamicResource Str_Attach_Color}" Width="1.4*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ComboBox SelectedIndex="{Binding ColorModeIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <ComboBoxItem Content="{DynamicResource Str_ColorOption}" />
+                                        <ComboBoxItem Content="{DynamicResource Str_BlackWhiteOption}" />
+                                    </ComboBox>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="{DynamicResource Str_Attach_Remove}" Width="Auto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="✕" Padding="6,2" Click="RemoveAttachment_Click" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </DockPanel>
         </GroupBox>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left">
-            <Button Content="{DynamicResource Str_OpenConfirmationPreview}"
-                    Padding="12,6" Margin="0,0,8,0"
-                    Click="OpenConfirmationPreview_Click" />
             <Button Content="{DynamicResource Str_SendButton}"
                     Padding="12,6"
                     Click="Send_Click" />
         </StackPanel>
+
+        <!-- Shown while page counting runs on a background thread (§3 of docs/DESIGN.md -
+             Office COM calls run off the UI thread so this can actually animate, and so
+             the window doesn't look frozen during the few seconds Word/PDF/PPTX counting
+             can take). Covers the whole window and blocks input to it while visible. -->
+        <Border x:Name="LoadingOverlay"
+                Grid.Row="0" Grid.RowSpan="4"
+                Background="#AA000000"
+                Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Ellipse Width="48" Height="48"
+                         Stroke="White" StrokeThickness="4"
+                         StrokeDashArray="7 2.5" StrokeDashCap="Round">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform x:Name="LoadingSpinnerRotate" CenterX="24" CenterY="24" />
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="LoadingSpinnerRotate"
+                                                     Storyboard.TargetProperty="Angle"
+                                                     From="0" To="360" Duration="0:0:0.9"
+                                                     RepeatBehavior="Forever" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+                <TextBlock x:Name="LoadingStatusText"
+                           Foreground="White" FontSize="14"
+                           Margin="0,14,0,0" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource Str_ConfirmationTitle}"
         FlowDirection="RightToLeft"
-        Height="400" Width="500"
-        WindowStartupLocation="CenterOwner"
-        ResizeMode="NoResize">
+        Height="650" Width="600"
+        MinHeight="500" MinWidth="500"
+        WindowStartupLocation="CenterOwner">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -18,12 +18,87 @@
                    FontSize="18" FontWeight="Bold"
                    Margin="0,0,0,16" />
 
-        <!-- Placeholder for the full request/attachment summary (§8.2 of docs/DESIGN.md) -->
-        <TextBlock Grid.Row="1"
-                   Text="{DynamicResource Str_ConfirmationPlaceholder}"
-                   TextWrapping="Wrap"
-                   Foreground="Gray"
-                   VerticalAlignment="Top" />
+        <!-- Full request/attachment summary (§8.2 of docs/DESIGN.md). Each field and
+             each attachment is its own set of elements, not one concatenated string -
+             mixing Hebrew, numbers, and Latin file names in a single text run is what
+             caused the earlier jumbled rendering. -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="180" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Str_Field_ProgramName}" FontWeight="Bold" Margin="0,4" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtProgramNameValue" Margin="0,4" TextWrapping="Wrap" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Str_Field_BudgetLine}" FontWeight="Bold" Margin="0,4" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtBudgetLineValue" Margin="0,4" TextWrapping="Wrap" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Str_Field_CopiesCount}" FontWeight="Bold" Margin="0,4" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtCopiesCountValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Str_Field_HolePunch}" FontWeight="Bold" Margin="0,4" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TxtHolePunchValue" Margin="0,4" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource Str_Field_DoubleSided}" FontWeight="Bold" Margin="0,4" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TxtDoubleSidedValue" Margin="0,4" />
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource Str_Field_Stapling}" FontWeight="Bold" Margin="0,4" />
+                    <TextBlock Grid.Row="5" Grid.Column="1" x:Name="TxtStaplingValue" Margin="0,4" />
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource Str_Field_PageType}" FontWeight="Bold" Margin="0,4" />
+                    <TextBlock Grid.Row="6" Grid.Column="1" x:Name="TxtPageTypeValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+
+                    <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource Str_Field_SlidesPerPage}" FontWeight="Bold" Margin="0,4" TextWrapping="Wrap" />
+                    <TextBlock Grid.Row="7" Grid.Column="1" x:Name="TxtSlidesPerPageValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
+
+                    <TextBlock Grid.Row="8" Grid.Column="0" Text="{DynamicResource Str_Field_Notes}" FontWeight="Bold" Margin="0,4" VerticalAlignment="Top" />
+                    <TextBlock Grid.Row="8" Grid.Column="1" x:Name="TxtNotesValue" Margin="0,4" TextWrapping="Wrap" />
+                </Grid>
+
+                <TextBlock Text="{DynamicResource Str_AttachmentsSectionTitle}" FontWeight="Bold" FontSize="15" Margin="0,0,0,8" />
+
+                <!-- Each attachment is one row of separate TextBlocks (file name | pages | color),
+                     not one interpolated string, for the same reason as above. A Grid (not a
+                     StackPanel) so the file name column is width-bound and wraps instead of
+                     silently clipping if it's long. -->
+                <ItemsControl x:Name="AttachmentsList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border BorderBrush="#DDDDDD" BorderThickness="0,0,0,1" Padding="0,6">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding FileName}" FontWeight="Bold" TextWrapping="Wrap" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text=" | " Foreground="Gray" Margin="6,0" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="2" Text="{Binding PageCount}" FlowDirection="LeftToRight" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="3" Text=" עמודים | " Foreground="Gray" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="4" Text="{Binding ColorModeDisplay}" VerticalAlignment="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,16,0,0">
             <Button Content="{DynamicResource Str_ConfirmationConfirm}"

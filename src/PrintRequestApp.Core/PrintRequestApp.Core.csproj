@@ -1,10 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- net8.0-windows (not plain net8.0): Word/Outlook COM interop only works on
+         Windows, even though it's done via late-binding (dynamic/IDispatch) rather
+         than a compiled PIA reference - see WordPageCounter for why. -->
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <RootNamespace>PrintRequestApp.Core</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Pure-managed libraries for PDF/PPTX page counting (§6.1/§6.3 of docs/DESIGN.md).
+         Switched from PdfPig to PdfSharp: PdfPig has no working stable release right
+         now (its only available build threw FileNotFoundException internally on every
+         real PDF), while PdfSharp 6.x is a mature, actively-versioned, cross-platform
+         package with a lightweight "information only" open mode suited to just
+         reading page count. -->
+    <PackageReference Include="PdfSharp" Version="6.2.4" />
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+  </ItemGroup>
 
 </Project>
