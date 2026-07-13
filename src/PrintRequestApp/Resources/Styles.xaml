@@ -1,6 +1,26 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
+    <!-- ============================================================
+         Palette - a single modern, muted-indigo accent over a light
+         neutral background. Everything below is an implicit (no
+         x:Key, TargetType-only) style, so it applies automatically to
+         every existing control app-wide with zero changes to any
+         Window's markup, bindings, or event handlers.
+         ============================================================ -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#6366F1" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="#4F46E5" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="#4338CA" />
+    <SolidColorBrush x:Key="DisabledBrush" Color="#C7C9D9" />
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#F3F4F6" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="BorderBrushLight" Color="#D9DBE1" />
+    <SolidColorBrush x:Key="HeaderBackgroundBrush" Color="#EEF0FB" />
+    <SolidColorBrush x:Key="AlternatingRowBrush" Color="#F8F9FC" />
+    <SolidColorBrush x:Key="SelectedRowBrush" Color="#E7E7FA" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1F2430" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#6B7280" />
+
     <!--
         Applies globally to every Window (MainWindow, ConfirmationDialog, any future
         window) since FlowDirection and FontFamily are inherited properties: setting
@@ -10,6 +30,163 @@
         <Setter Property="FlowDirection" Value="RightToLeft" />
         <Setter Property="FontFamily" Value="Segoe UI" />
         <Setter Property="FontSize" Value="14" />
+        <Setter Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+    </Style>
+
+    <!-- ============ Buttons: flat, rounded, accent-filled ============ -->
+    <Style TargetType="{x:Type Button}">
+        <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="14,8" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border x:Name="ButtonBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="6">
+                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentHoverBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource AccentPressedBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="ButtonBorder" Property="Background" Value="{StaticResource DisabledBrush}" />
+                            <Setter Property="Foreground" Value="White" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ TextBox: flat card with accent focus ring ============ -->
+    <Style TargetType="{x:Type TextBox}">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushLight}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="8,6" />
+        <Setter Property="CaretBrush" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="SelectionBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TextBox}">
+                    <Border x:Name="TextBoxBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5">
+                        <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="TextBoxBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                            <Setter TargetName="TextBoxBorder" Property="BorderThickness" Value="2" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="TextBoxBorder" Property="Background" Value="{StaticResource WindowBackgroundBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ ComboBox: color/spacing only, no retemplate - avoids any risk
+         of breaking the dropdown's open/close/selection behavior without being
+         able to visually verify a full template rewrite. ============ -->
+    <Style TargetType="{x:Type ComboBox}">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushLight}" />
+        <Setter Property="Padding" Value="6,4" />
+    </Style>
+
+    <!-- ============ GroupBox: modern card look (rounded, accent-colored header
+         text, no old-fashioned notch-in-the-border frame) ============ -->
+    <Style TargetType="{x:Type GroupBox}">
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushLight}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type GroupBox}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,1,1,0"
+                                CornerRadius="8,8,0,0"
+                                Padding="14,10">
+                            <ContentPresenter ContentSource="Header"
+                                              TextElement.FontWeight="SemiBold"
+                                              TextElement.FontSize="15"
+                                              TextElement.Foreground="{StaticResource AccentBrush}" />
+                        </Border>
+
+                        <Border Grid.Row="1"
+                                Background="{StaticResource SurfaceBrush}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1,0,1,1"
+                                CornerRadius="0,0,8,8">
+                            <ContentPresenter Margin="4" />
+                        </Border>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ============ DataGrid: flat, subtle alternating rows, tinted headers ============ -->
+    <Style TargetType="{x:Type DataGrid}">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushLight}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="RowBackground" Value="{StaticResource SurfaceBrush}" />
+        <Setter Property="AlternatingRowBackground" Value="{StaticResource AlternatingRowBrush}" />
+        <Setter Property="HorizontalGridLinesBrush" Value="#EDEEF2" />
+        <Setter Property="VerticalGridLinesBrush" Value="#EDEEF2" />
+        <Setter Property="RowHeaderWidth" Value="0" />
+    </Style>
+
+    <Style TargetType="{x:Type DataGridColumnHeader}">
+        <Setter Property="Background" Value="{StaticResource HeaderBackgroundBrush}" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Padding" Value="8,8" />
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrushLight}" />
+        <Setter Property="BorderThickness" Value="0,0,1,1" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
+    <Style TargetType="{x:Type DataGridCell}">
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="6,4" />
+        <Style.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+                <Setter Property="Background" Value="{StaticResource SelectedRowBrush}" />
+                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
 </ResourceDictionary>
