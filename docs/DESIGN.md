@@ -33,8 +33,8 @@ computes/validates page counts per file, and on submit:
 |---|---|
 | UI framework | WPF, **.NET 8 (net8.0-windows)** |
 | MVVM | Hand-written `INotifyPropertyChanged` view models for now (e.g. `AttachmentItemViewModel`) - simpler to get right without a build environment to verify source-generator output against; CommunityToolkit.Mvvm remains an option if hand-written boilerplate grows unwieldy |
-| Outlook automation | `Microsoft.Office.Interop.Outlook` (COM interop) |
-| Word page counting | `Microsoft.Office.Interop.Word` (COM interop) |
+| Outlook automation | COM interop, likely late-bound (`Type.GetTypeFromProgID` + `dynamic`) given the PIA-version fragility found while wiring Word - to be confirmed when this phase is built |
+| Word page counting | Late-bound COM interop (`Type.GetTypeFromProgID("Word.Application")` + `dynamic`/`IDispatch`), not a compiled `Microsoft.Office.Interop.Word` PIA reference - see §6.2 |
 | PDF page counting | PdfSharp (see §6.1) |
 | PPTX slide counting | DocumentFormat.OpenXml (Open XML SDK) |
 | Excel writing | ClosedXML (see §6.4) |
@@ -195,15 +195,25 @@ design depends on their real values.
 
 ### 6.2 Word page counting — Word COM Interop (required by brief)
 
-Uses `Microsoft.Office.Interop.Word`: open the document, call
-`Document.Repaginate()` then read
-`Document.ComputedStatistics(WdStatistic.wdStatisticPages)` for a live,
-accurate count (the cached `Document.ComputedStatistics` / built-in
-properties can be stale for documents that haven't been repaginated since
-last edit). Documents are opened with `Visible = false`,
-`ReadOnly = true`, and are always closed and COM-released in a `finally`
-block to avoid orphaned `WINWORD.EXE` processes accumulating on the
-requester's machine.
+Opens the document, calls `Document.Repaginate()`, then reads
+`Document.ComputedStatistics(wdStatisticPages)` for a live, accurate count
+(the cached statistics/built-in properties can be stale for documents that
+haven't been repaginated since last edit). Documents are opened with
+`Visible = false`, `ReadOnly = true`, and are always closed and COM-released
+in a `finally` block to avoid orphaned `WINWORD.EXE` processes accumulating
+on the requester's machine.
+
+**Late-bound (no `Microsoft.Office.Interop.Word` PIA reference):** the
+compiled PIA pins a specific Office-version assembly dependency (`office,
+Version=15.0.0.0`) that isn't guaranteed to be resolvable at runtime — this
+surfaced as an unhandled `FileNotFoundException` on a real test machine,
+and is a fragile approach in general for an internal tool that may run
+against different installed Office versions across different users'
+machines. Instead, `WordPageCounter` gets the COM type via
+`Type.GetTypeFromProgID("Word.Application")`, creates it with
+`Activator.CreateInstance`, and drives it entirely through `dynamic`
+(late-bound `IDispatch` calls) — this works against whatever Word version
+is actually installed, with zero compile-time assembly-version dependency.
 
 ### 6.3 PPTX slide counting — Open XML SDK (required by brief)
 

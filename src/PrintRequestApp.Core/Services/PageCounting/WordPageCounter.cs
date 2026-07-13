@@ -1,28 +1,44 @@
+using System;
 using System.Runtime.InteropServices;
-using Microsoft.Office.Interop.Word;
 using PrintRequestApp.Core.Models;
 
 namespace PrintRequestApp.Core.Services.PageCounting;
 
+// Fully late-bound COM automation (no Microsoft.Office.Interop.Word PIA reference):
+// referencing that PIA pulls in a specific Office-version-pinned "office" core
+// assembly dependency that isn't guaranteed to be present/resolvable at runtime
+// (observed as an unhandled FileNotFoundException for "office, Version=15.0.0.0"
+// on a real machine). Going through Word's ProgID + dynamic/IDispatch instead
+// works against whatever Word version is actually installed, with no compile-time
+// assembly-version dependency at all.
 public sealed class WordPageCounter : IPageCounter
 {
+    private const int WdAlertsNone = 0;
+    private const int WdDoNotSaveChanges = 0;
+    private const int WdStatisticPages = 2;
+
     public FileKind SupportedKind => FileKind.Word;
 
     public int? TryCountPages(string filePath)
     {
-        Application? wordApp = null;
-        Document? document = null;
+        dynamic? wordApp = null;
+        dynamic? document = null;
 
         try
         {
-            wordApp = new Application
+            var wordApplicationType = Type.GetTypeFromProgID("Word.Application");
+            if (wordApplicationType is null)
             {
-                Visible = false,
-                DisplayAlerts = WdAlertLevel.wdAlertsNone
-            };
+                return null; // Word isn't installed/registered on this machine.
+            }
+
+            wordApp = Activator.CreateInstance(wordApplicationType);
+            wordApp!.Visible = false;
+            wordApp.DisplayAlerts = WdAlertsNone;
 
             document = wordApp.Documents.Open(
-                FileName: filePath,
+                filePath,
+                ConfirmConversions: false,
                 ReadOnly: true,
                 AddToRecentFiles: false,
                 Visible: false);
@@ -31,11 +47,7 @@ public sealed class WordPageCounter : IPageCounter
             // document that hasn't been repaginated since it was last edited -
             // Repaginate() first guarantees an accurate, live count (§6.2 of docs/DESIGN.md).
             document.Repaginate();
-
-            // Late-bound: this PIA version doesn't statically expose ComputedStatistics,
-            // but the real Word COM object supports it via IDispatch regardless.
-            dynamic dynamicDocument = document;
-            return (int)dynamicDocument.ComputedStatistics(WdStatistic.wdStatisticPages);
+            return (int)document.ComputedStatistics(WdStatisticPages);
         }
         catch
         {
@@ -48,13 +60,13 @@ public sealed class WordPageCounter : IPageCounter
         {
             if (document is not null)
             {
-                document.Close(SaveChanges: WdSaveOptions.wdDoNotSaveChanges);
+                document.Close(SaveChanges: WdDoNotSaveChanges);
                 Marshal.ReleaseComObject(document);
             }
 
             if (wordApp is not null)
             {
-                wordApp.Quit(SaveChanges: WdSaveOptions.wdDoNotSaveChanges);
+                wordApp.Quit(SaveChanges: WdDoNotSaveChanges);
                 Marshal.ReleaseComObject(wordApp);
             }
         }
