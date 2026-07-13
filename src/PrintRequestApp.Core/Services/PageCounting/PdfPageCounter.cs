@@ -1,5 +1,5 @@
+using PdfSharp.Pdf.IO;
 using PrintRequestApp.Core.Models;
-using UglyToad.PdfPig;
 
 namespace PrintRequestApp.Core.Services.PageCounting;
 
@@ -11,8 +11,8 @@ public sealed class PdfPageCounter : IPageCounter
     {
         try
         {
-            using var document = PdfDocument.Open(filePath);
-            return document.NumberOfPages;
+            using var document = PdfReader.Open(filePath, PdfDocumentOpenMode.InformationOnly);
+            return document.PageCount;
         }
         catch
         {

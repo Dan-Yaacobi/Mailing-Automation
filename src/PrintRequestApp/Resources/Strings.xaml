@@ -24,15 +24,13 @@
     <sys:String x:Key="Str_DragDropHint">ניתן לגרור קבצים לכאן, או להשתמש בכפתור "הוסף קובץ"</sys:String>
     <sys:String x:Key="Str_Attach_FileName">שם קובץ</sys:String>
     <sys:String x:Key="Str_Attach_Detected">עמודים שזוהו</sys:String>
-    <sys:String x:Key="Str_Attach_Manual">עריכה ידנית</sys:String>
+    <sys:String x:Key="Str_Attach_Manual">מספר עמודים (עריכה ידנית)</sys:String>
     <sys:String x:Key="Str_Attach_Color">צבעוני / שחור-לבן</sys:String>
     <sys:String x:Key="Str_Attach_Remove">הסר</sys:String>
     <sys:String x:Key="Str_ColorOption">צבעוני</sys:String>
     <sys:String x:Key="Str_BlackWhiteOption">שחור-לבן</sys:String>
     <sys:String x:Key="Str_SendButton">שלח בקשה</sys:String>
-    <sys:String x:Key="Str_OpenConfirmationPreview">תצוגה מקדימה של חלון האישור</sys:String>
     <sys:String x:Key="Str_ConfirmationTitle">אישור שליחת בקשה</sys:String>
-    <sys:String x:Key="Str_ConfirmationPlaceholder">כאן יופיע סיכום מלא של הבקשה, כולל כל שדה וכל קובץ מצורף, לפני השליחה בפועל</sys:String>
     <sys:String x:Key="Str_ConfirmationBack">חזרה לעריכה</sys:String>
     <sys:String x:Key="Str_ConfirmationConfirm">אישור ושליחה</sys:String>
 

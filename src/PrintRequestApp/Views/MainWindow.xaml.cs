@@ -27,15 +27,6 @@ public partial class MainWindow : Window
         DataContext = this;
     }
 
-    private void OpenConfirmationPreview_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new ConfirmationDialog
-        {
-            Owner = this
-        };
-        dialog.ShowDialog();
-    }
-
     private void NumericTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
         e.Handled = !e.Text.All(char.IsDigit);
@@ -119,6 +110,21 @@ public partial class MainWindow : Window
     // field set and control types can be sanity-checked before wiring anything real.
     private void Send_Click(object sender, RoutedEventArgs e)
     {
+        var missingPageCount = Attachments.Where(a => a.EffectivePageCount is null).ToList();
+        if (missingPageCount.Count > 0)
+        {
+            var fileList = string.Join("\n", missingPageCount.Select(a => $"  - {a.FileName}"));
+            MessageBox.Show(
+                this,
+                $"לא ניתן לשלוח: לא הוזן מספר עמודים עבור הקבצים הבאים:\n{fileList}",
+                "שגיאה - חסר מספר עמודים",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error,
+                MessageBoxResult.OK,
+                MessageBoxOptions.RtlReading);
+            return;
+        }
+
         var programName = TxtProgramName.Text;
         var budgetLine = TxtBudgetLine.Text;
         int.TryParse(TxtCopiesCount.Text, out var copiesCount);
@@ -149,13 +155,19 @@ public partial class MainWindow : Window
             $"הערות נוספות: {(string.IsNullOrWhiteSpace(notes) ? "אין" : notes)}\n\n" +
             $"קבצים מצורפים ({Attachments.Count}):\n{attachmentsSummary}";
 
+        var confirmationDialog = new ConfirmationDialog(summary) { Owner = this };
+        if (confirmationDialog.ShowDialog() != true)
+        {
+            return;
+        }
+
         Debug.WriteLine("=== נתוני הבקשה שנאספו (טרם נשלח בפועל) ===");
         Debug.WriteLine(summary);
 
         MessageBox.Show(
             this,
             summary,
-            "נתוני הבקשה שנאספו (בדיקה בלבד)",
+            "הבקשה נשלחה (בדיקה בלבד - טרם חובר backend אמיתי)",
             MessageBoxButton.OK,
             MessageBoxImage.Information,
             MessageBoxResult.OK,

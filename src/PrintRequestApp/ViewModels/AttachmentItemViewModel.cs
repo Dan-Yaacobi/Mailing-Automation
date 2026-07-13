@@ -8,7 +8,7 @@ namespace PrintRequestApp.ViewModels;
 public sealed class AttachmentItemViewModel : INotifyPropertyChanged
 {
     private int? _manualPageCount;
-    private ColorMode? _colorMode;
+    private ColorMode? _colorMode = Core.Models.ColorMode.BlackAndWhite;
 
     public AttachmentItemViewModel(string filePath, FileKind fileKind, int? detectedPageCount)
     {
@@ -62,8 +62,8 @@ public sealed class AttachmentItemViewModel : INotifyPropertyChanged
         }
     }
 
-    // Bound to the color/B&W ComboBox's SelectedIndex: 0 = color, 1 = black & white,
-    // -1 = nothing chosen yet (required, no default - §4 of docs/DESIGN.md).
+    // Bound to the color/B&W ComboBox's SelectedIndex: 0 = color, 1 = black & white
+    // (default for every new attachment), -1 only if ColorMode is somehow cleared.
     public int ColorModeIndex
     {
         get => ColorMode switch

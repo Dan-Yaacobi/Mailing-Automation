@@ -18,12 +18,12 @@
                    FontSize="18" FontWeight="Bold"
                    Margin="0,0,0,16" />
 
-        <!-- Placeholder for the full request/attachment summary (§8.2 of docs/DESIGN.md) -->
-        <TextBlock Grid.Row="1"
-                   Text="{DynamicResource Str_ConfirmationPlaceholder}"
-                   TextWrapping="Wrap"
-                   Foreground="Gray"
-                   VerticalAlignment="Top" />
+        <!-- Full request/attachment summary (§8.2 of docs/DESIGN.md), set in code-behind -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <TextBlock x:Name="TxtSummary"
+                       TextWrapping="Wrap"
+                       VerticalAlignment="Top" />
+        </ScrollViewer>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,16,0,0">
             <Button Content="{DynamicResource Str_ConfirmationConfirm}"

@@ -151,9 +151,6 @@
         </GroupBox>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left">
-            <Button Content="{DynamicResource Str_OpenConfirmationPreview}"
-                    Padding="12,6" Margin="0,0,8,0"
-                    Click="OpenConfirmationPreview_Click" />
             <Button Content="{DynamicResource Str_SendButton}"
                     Padding="12,6"
                     Click="Send_Click" />

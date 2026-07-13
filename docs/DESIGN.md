@@ -32,10 +32,10 @@ computes/validates page counts per file, and on submit:
 | Concern | Choice |
 |---|---|
 | UI framework | WPF, **.NET 8 (net8.0-windows)** |
-| MVVM | CommunityToolkit.Mvvm (source-generator based, MIT license, no heavy dependency) |
+| MVVM | Hand-written `INotifyPropertyChanged` view models for now (e.g. `AttachmentItemViewModel`) - simpler to get right without a build environment to verify source-generator output against; CommunityToolkit.Mvvm remains an option if hand-written boilerplate grows unwieldy |
 | Outlook automation | `Microsoft.Office.Interop.Outlook` (COM interop) |
 | Word page counting | `Microsoft.Office.Interop.Word` (COM interop) |
-| PDF page counting | PdfPig (see §6.1) |
+| PDF page counting | PdfSharp (see §6.1) |
 | PPTX slide counting | DocumentFormat.OpenXml (Open XML SDK) |
 | Excel writing | ClosedXML (see §6.4) |
 | Config | JSON file (`appsettings.json`) next to the executable |
@@ -148,7 +148,7 @@ Color/B&W is intentionally **not** on this object — it lives per file on
 | `DetectionSucceeded` | bool | drives the "לא זוהה אוטומטית" UI hint |
 | `ManualPageCount` | int? | set when the user edits the count; `null` until touched |
 | `EffectivePageCount` | int (computed) | `ManualPageCount ?? DetectedPageCount`; submission is blocked if this is null (user must supply a number when auto-detection fails) |
-| `ColorMode` | enum `{ Color, BlackAndWhite }?` | **required, no default.** Starts unset so the user must make an explicit, visible choice for every file (backed by the "mark all" buttons for speed) rather than silently inheriting a default that could be wrong |
+| `ColorMode` | enum `{ Color, BlackAndWhite }` | **Defaults to `BlackAndWhite`** for every newly-attached file (revised from the original "no default" decision after hands-on UI testing showed an empty selector reads as broken rather than deliberate). Still overridable per file, and via the "mark all" buttons |
 
 ### `SubmissionResult` (returned by the submit flow, drives the result screen)
 
@@ -186,12 +186,12 @@ design depends on their real values.
 
 ## 6. Library Choices & Tradeoffs
 
-### 6.1 PDF page counting — **PdfPig**
+### 6.1 PDF page counting — **PdfSharp**
 
 | Option | Verdict |
 |---|---|
-| **PdfPig** (chosen) | Pure managed C#, Apache 2.0, no native/COM dependency, actively maintained, reads page count cheaply without rendering. Read-only (fine — we only need page count). |
-| PdfSharp | Primarily a PDF *creation* library; its reading support is weaker for malformed/encrypted/scanned PDFs, which real-world requester files will include. |
+| **PdfSharp** (chosen) | MIT-licensed, mature, actively-versioned (6.x targets .NET 6/8), cross-platform. `PdfReader.Open(path, PdfDocumentOpenMode.InformationOnly)` + `.PageCount` reads the page count cheaply without parsing content streams. |
+| PdfPig | Originally chosen (pure managed, no COM), but **dropped**: it currently has no stable NuGet release at all, and the only available prerelease build (`0.1.9-alpha001-patch1`) threw `FileNotFoundException` from inside its own DLL on every real PDF tested. Not usable as of this writing. |
 | iText7 | Very capable, but AGPL-licensed unless a commercial license is purchased — a licensing complication this internal tool doesn't need. |
 
 ### 6.2 Word page counting — Word COM Interop (required by brief)
@@ -325,17 +325,15 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 ```
 
 - The attachment grid: each row shows file name, the auto-detected page
-  count (or "לא זוהה אוטומטית — נא להזין ידנית" if detection failed), an
-  editable numeric field for the manual override, a required Color/B&W
-  toggle (two mutually exclusive buttons, unset by default — visually
-  flagged, e.g. red outline, until the user picks one), and a remove
-  button.
+  count (or "לא זוהה אוטומטית" if detection failed), an editable numeric
+  field for the manual override, a Color/B&W selector defaulting to B&W for
+  every newly-attached file, and a remove button.
 - "סמן הכל כצבעוני" / "סמן הכל כשחור-לבן" set `ColorMode` on every current
   attachment in one click; still overridable per row afterward.
-- "שלח בקשה" is disabled (with inline validation messages explaining why)
-  until: all required request-level fields are filled, at least one file
-  is attached, every attachment has an explicit `ColorMode`, and every
-  attachment has a resolvable `EffectivePageCount`.
+- "שלח בקשה" validates before submitting: at least one file attached, and
+  every attachment has a resolvable `EffectivePageCount` (detected or
+  manually entered) — otherwise it shows an error listing which files still
+  need a page count, rather than sending an incomplete request.
 
 ### 8.2 Confirmation Dialog
 
@@ -367,7 +365,9 @@ internal states within the same dialog (avoids stacking multiple popups):
   if at least one is, it's required and must be ≥ 1.
 - `Notes` is optional, no validation.
 - At least one attachment present.
-- Every attachment has `ColorMode` set and a non-null `EffectivePageCount`.
+- Every attachment has a non-null `EffectivePageCount` (blocks submission with
+  an error listing the offending files otherwise); `ColorMode` always has a
+  value since it defaults to `BlackAndWhite`.
 
 ### 9.2 Orchestration (`RequestSubmissionService.SubmitAsync`)
 
