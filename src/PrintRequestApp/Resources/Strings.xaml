@@ -29,6 +29,7 @@
     <sys:String x:Key="Str_Attach_Remove">הסר</sys:String>
     <sys:String x:Key="Str_ColorOption">צבעוני</sys:String>
     <sys:String x:Key="Str_BlackWhiteOption">שחור-לבן</sys:String>
+    <sys:String x:Key="Str_SendToLabel">שלח אל:</sys:String>
     <sys:String x:Key="Str_SendButton">שלח בקשה</sys:String>
     <sys:String x:Key="Str_ConfirmationTitle">אישור שליחת בקשה</sys:String>
     <sys:String x:Key="Str_ConfirmationBack">חזרה לעריכה</sys:String>

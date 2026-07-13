@@ -171,6 +171,14 @@
         </GroupBox>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Left">
+            <!-- Hardcoded placeholder recipient for testing (§5/§11 of docs/DESIGN.md) -
+                 a dropdown so more recipients can be added later without redesigning
+                 this, even though only one is configured for now. -->
+            <TextBlock Text="{DynamicResource Str_SendToLabel}" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <ComboBox x:Name="CmbRecipient" Width="220" Margin="0,0,16,0"
+                      FlowDirection="LeftToRight" SelectedIndex="0">
+                <ComboBoxItem Content="dany@lahav.ac.il" />
+            </ComboBox>
             <Button Content="{DynamicResource Str_SendButton}"
                     Padding="12,6"
                     Click="Send_Click" />

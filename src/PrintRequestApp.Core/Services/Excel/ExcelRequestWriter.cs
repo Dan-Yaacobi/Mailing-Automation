@@ -28,8 +28,10 @@ public sealed class ExcelRequestWriter : IExcelRequestWriter
         "סה\"כ עמודים"
     };
 
-    // Dev/manual-testing convenience only - creates an empty workbook at filePath if
-    // nothing is there yet. Production must never call this: a missing file there
+    // Dev/manual-testing convenience only - creates a workbook at filePath if nothing
+    // is there yet, seeded with the current month's real sheet (ClosedXML requires at
+    // least one worksheet to save at all, and this avoids leaving a permanent unused
+    // placeholder tab behind). Production must never call this: a missing file there
     // means the real shared log is unreachable, which TryWrite is deliberately built
     // to fail on rather than paper over (§9.4 of docs/DESIGN.md).
     public static void EnsureDummyWorkbookExists(string filePath)
@@ -40,7 +42,7 @@ public sealed class ExcelRequestWriter : IExcelRequestWriter
         }
 
         using var workbook = new XLWorkbook();
-        workbook.AddWorksheet("placeholder");
+        CreateMonthSheet(workbook, DateTime.Now.ToString("MM-yyyy"));
         workbook.SaveAs(filePath);
     }
 

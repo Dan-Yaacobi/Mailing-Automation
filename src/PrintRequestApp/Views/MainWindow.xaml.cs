@@ -11,6 +11,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using PrintRequestApp.Core.Services.Excel;
+using PrintRequestApp.Core.Services.Outlook;
 using PrintRequestApp.Core.Services.PageCounting;
 using PrintRequestApp.ViewModels;
 
@@ -29,6 +30,7 @@ public partial class MainWindow : Window
 
     private readonly PageCounterFactory _pageCounterFactory = PageCounterFactory.CreateDefault();
     private readonly ExcelRequestWriter _excelWriter = new();
+    private readonly IOutlookEmailService _outlookEmailService = new OutlookEmailService();
 
     public ObservableCollection<AttachmentItemViewModel> Attachments { get; } = new();
 
@@ -98,7 +100,7 @@ public partial class MainWindow : Window
                 LoadingStatusText.Text = $"מזהה מספר עמודים: {Path.GetFileName(filePath)}";
 
                 var fileKind = Core.Models.FileKindDetector.FromFilePath(filePath);
-                var detectedPageCount = await CountPagesOnStaThreadAsync(fileKind, filePath);
+                var detectedPageCount = await RunOnStaThreadAsync(() => _pageCounterFactory.TryCountPages(fileKind, filePath));
                 Attachments.Add(new AttachmentItemViewModel(filePath, fileKind, detectedPageCount));
             }
         }
@@ -108,15 +110,18 @@ public partial class MainWindow : Window
         }
     }
 
-    private Task<int?> CountPagesOnStaThreadAsync(Core.Models.FileKind fileKind, string filePath)
+    // Office COM objects need an STA apartment (the thread pool is MTA) - shared by
+    // page counting and Outlook sending, both of which also need the UI thread free
+    // so the loading overlay's spinner can actually animate (§3 of docs/DESIGN.md).
+    private static Task<T> RunOnStaThreadAsync<T>(Func<T> action)
     {
-        var tcs = new TaskCompletionSource<int?>();
+        var tcs = new TaskCompletionSource<T>();
 
         var thread = new Thread(() =>
         {
             try
             {
-                tcs.SetResult(_pageCounterFactory.TryCountPages(fileKind, filePath));
+                tcs.SetResult(action());
             }
             catch (Exception ex)
             {
@@ -156,9 +161,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // No backend yet - this just collects and echoes what the form holds, so the
-    // field set and control types can be sanity-checked before wiring anything real.
-    private void Send_Click(object sender, RoutedEventArgs e)
+    private async void Send_Click(object sender, RoutedEventArgs e)
     {
         if (!int.TryParse(TxtCopiesCount.Text, out var copiesCount) || copiesCount < 1)
         {
@@ -223,7 +226,36 @@ public partial class MainWindow : Window
             return;
         }
 
-        Debug.WriteLine($"=== בקשה נשלחה (בדיקה בלבד): {request.ProgramName}, {request.Attachments.Count} קבצים ===");
+        var recipientEmail = (string)((ComboBoxItem)CmbRecipient.SelectedItem).Content;
+
+        LoadingStatusText.Text = "שולח אימייל...";
+        LoadingOverlay.Visibility = Visibility.Visible;
+        Core.Models.EmailSendResult emailResult;
+        try
+        {
+            emailResult = await RunOnStaThreadAsync(() => _outlookEmailService.TrySendRequestEmail(request, recipientEmail));
+        }
+        finally
+        {
+            LoadingOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        // The email is the actual submission mechanism (§9.2 of docs/DESIGN.md) - a
+        // failure here blocks, with a clear error, rather than silently continuing.
+        if (!emailResult.Success)
+        {
+            MessageBox.Show(
+                this,
+                $"שליחת האימייל נכשלה:\n{emailResult.ErrorMessage}",
+                "שגיאה - שליחת אימייל נכשלה",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error,
+                MessageBoxResult.OK,
+                MessageBoxOptions.RtlReading);
+            return;
+        }
+
+        Debug.WriteLine($"=== בקשה נשלחה: {request.ProgramName}, {request.Attachments.Count} קבצים, נשלח אל {recipientEmail} ===");
 
         var colorPagesTotal = request.Attachments
             .Where(a => a.ColorMode == Core.Models.ColorMode.Color)
@@ -235,12 +267,13 @@ public partial class MainWindow : Window
         Debug.WriteLine($"סה\"כ עמודים לשכפול (עמודים לקובץ × מספר עותקים) - צבעוני: {colorPagesTotal}, שחור-לבן: {blackAndWhitePagesTotal}");
 
         // Manual-testing wiring only (§9.5 of docs/DESIGN.md) - writes to a dummy file
-        // on the Desktop, not the real shared production log.
+        // on the Desktop, not the real shared production log. Doesn't block the
+        // success message below even if it fails - the email already went out.
         ExcelRequestWriter.EnsureDummyWorkbookExists(DummyExcelLogPath);
         var excelWriteSucceeded = _excelWriter.TryWrite(request, DummyExcelLogPath);
         var excelStatusText = excelWriteSucceeded
-            ? $"נשמר ליומן הבדיקה:\n{DummyExcelLogPath}"
-            : "הכתיבה ליומן הבדיקה נכשלה - ראה Debug Output";
+            ? $"נשמר ליומן הבדיקה (Excel):\n{DummyExcelLogPath}"
+            : "הכתיבה ליומן הבדיקה (Excel) נכשלה - ראה Debug Output";
 
         Debug.WriteLine(excelWriteSucceeded
             ? $"נכתב ליומן האקסל הדמה: {DummyExcelLogPath}"
@@ -248,7 +281,7 @@ public partial class MainWindow : Window
 
         MessageBox.Show(
             this,
-            $"הבקשה נשלחה בהצלחה (בדיקה בלבד - טרם חובר backend אמיתי)\n\n{excelStatusText}",
+            $"הבקשה נשלחה בהצלחה בדוא\"ל אל {recipientEmail}\n\n{excelStatusText}",
             "נשלח",
             MessageBoxButton.OK,
             MessageBoxImage.Information,
@@ -271,6 +304,7 @@ public partial class MainWindow : Window
         TxtSlidesPerPage.Clear();
         TxtNotes.Clear();
         Attachments.Clear();
+        CmbRecipient.SelectedIndex = 0;
     }
 
     private static bool IsYes(ComboBox comboBox) => comboBox.SelectedIndex == 1;

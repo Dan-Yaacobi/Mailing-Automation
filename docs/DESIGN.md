@@ -266,13 +266,26 @@ please enter manually" path as any unsupported file, per §4.
 | NPOI | Free/Apache, viable alternative, but a more verbose, lower-level API for this simple append-rows use case. |
 | Excel COM Interop | Would guarantee perfect fidelity with a hand-maintained template, but is slower, requires Excel installed and a visible/hidden instance per write, and is materially more fragile against a file that's locked or open by another user — exactly the failure mode this design needs to handle gracefully. ClosedXML reading/writing the file directly at the filesystem level is simpler to make resilient (see §8.2). |
 
-### 6.5 Outlook automation — COM Interop (required by brief)
+### 6.5 Outlook automation — COM Interop, late-bound — **implemented**
 
-`Microsoft.Office.Interop.Outlook`. The service first tries to attach to an
-**already-running** Outlook instance via
-`Marshal.GetActiveObject("Outlook.Application")` (most users have Outlook
-open), falling back to `new Application()` if none is running. This avoids
-spawning a second competing Outlook process against the same mail profile.
+Late-bound, same approach and reasoning as `WordPageCounter` (§6.2): gets
+the COM type via `Type.GetTypeFromProgID("Outlook.Application")` and drives
+it through `dynamic`, no compiled `Microsoft.Office.Interop.Outlook` PIA
+reference and its Office-version-pinned assembly dependency risk. Creating
+a new `Outlook.Application` when Outlook is already running attaches to
+that existing instance automatically — this is Outlook's own COM server
+behavior, unlike Word (which spawns a separate instance per
+`Activator.CreateInstance` call), so no separate "attach to running
+instance" step is needed.
+
+Composes an HTML email (`dir="rtl"`) with every request-level field
+**except page counts** (page counts are tracking data for the Excel log,
+not a printing instruction — the person printing acts on file name +
+color/B&W + finishing options) and the color/B&W setting per attached
+file, attaches the original files themselves, and sends via `MailItem.
+Send()`. Any failure (Outlook not installed, send rejected, etc.) comes
+back as a clear error shown to the user rather than a silent fallback,
+since this is the actual submission mechanism (§9.2).
 
 **Deployment note (not a blocker for this design):** some environments
 show Outlook's "a program is trying to send an email on your behalf"
@@ -356,9 +369,14 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 │  └─────────────────────────────────────────┘   │
 ├───────────────────────────────────────────────┤
 │  [הודעות אימות, אם יש]                           │
-│                                     [שלח בקשה]   │
+│              שלח אל: [dany@lahav.ac.il ▾]  [שלח בקשה]   │
 └───────────────────────────────────────────────┘
 ```
+
+The recipient dropdown is a hardcoded placeholder (currently one entry)
+rather than something users are expected to touch — a dropdown instead of
+a fixed label only so more recipients can be added later without
+redesigning this control.
 
 - The attachment grid: each row shows file name, a single editable page-count
   field (pre-filled from auto-detection when it succeeds), a read-only status
@@ -425,7 +443,14 @@ design for once that backend exists:
 
 ### 9.2 Orchestration (`RequestSubmissionService.SubmitAsync`)
 
-Runs after the user confirms in the dialog:
+**Currently implemented directly in `MainWindow.Send_Click`** (steps 2-4
+below, minus reading the Outlook user identity and the fallback email) -
+not yet its own `RequestSubmissionService`/`SubmissionResult` in Core, and
+the recipient is a hardcoded placeholder dropdown (one entry,
+`dany@lahav.ac.il`) rather than config-driven (§5/§11) - a real "no silent
+fallback" hard failure on email error and a "doesn't block success on
+Excel failure" soft failure on the write are both in place and match the
+plan below. Runs after the user confirms in the dialog:
 
 ```
 1. Read current Outlook user (NameSpace.CurrentUser) → SubmittedByDisplayName/Email
@@ -541,11 +566,14 @@ Excel by hand is a direct copy.
 Everything else in this document is a settled design decision. Only these
 three values are placeholders pending real answers:
 
-1. **Excel file path** — the real shared/network path for
-   `PrintRequests.xlsx` (currently `PLACEHOLDER_UNC_PATH\PrintRequests.xlsx`
-   in `appsettings.json`).
+1. **Excel file path** — the real shared/network path for the log
+   (currently a dummy file on the Desktop for manual testing, not
+   config-driven yet).
 2. **Primary recipient email** — the real address of the person who prints
-   requests (currently `PLACEHOLDER_PRINT_RECIPIENT@example.com`).
+   requests (currently hardcoded to `dany@lahav.ac.il` for testing, as the
+   only entry in the "שלח אל" dropdown — explicitly described as something
+   that "would never be touched" day-to-day, so a dropdown rather than a
+   settings file for now).
 3. **Fallback recipient email** — the real address for the manual-
    reconciliation fallback (currently
    `PLACEHOLDER_FALLBACK_RECIPIENT@example.com`; may end up being the same
