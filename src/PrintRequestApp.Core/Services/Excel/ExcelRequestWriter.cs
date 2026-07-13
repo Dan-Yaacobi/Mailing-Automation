@@ -28,6 +28,22 @@ public sealed class ExcelRequestWriter : IExcelRequestWriter
         "סה\"כ עמודים"
     };
 
+    // Dev/manual-testing convenience only - creates an empty workbook at filePath if
+    // nothing is there yet. Production must never call this: a missing file there
+    // means the real shared log is unreachable, which TryWrite is deliberately built
+    // to fail on rather than paper over (§9.4 of docs/DESIGN.md).
+    public static void EnsureDummyWorkbookExists(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            return;
+        }
+
+        using var workbook = new XLWorkbook();
+        workbook.AddWorksheet("placeholder");
+        workbook.SaveAs(filePath);
+    }
+
     public bool TryWrite(PrintRequest request, string filePath)
     {
         if (!File.Exists(filePath))

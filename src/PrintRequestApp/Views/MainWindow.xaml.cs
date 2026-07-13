@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
+using PrintRequestApp.Core.Services.Excel;
 using PrintRequestApp.Core.Services.PageCounting;
 using PrintRequestApp.ViewModels;
 
@@ -19,7 +20,15 @@ public partial class MainWindow : Window
 {
     private static readonly string[] SupportedAttachmentExtensions = { ".pdf", ".doc", ".docx", ".ppt", ".pptx" };
 
+    // Manual-testing wiring only, per the design doc's Excel phase: a dummy file on
+    // the Desktop, not the real shared production log (that path doesn't exist yet -
+    // still pending a walkthrough with whoever owns it).
+    private static readonly string DummyExcelLogPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+        "PrintRequestApp_DummyLog.xlsx");
+
     private readonly PageCounterFactory _pageCounterFactory = PageCounterFactory.CreateDefault();
+    private readonly ExcelRequestWriter _excelWriter = new();
 
     public ObservableCollection<AttachmentItemViewModel> Attachments { get; } = new();
 
@@ -225,9 +234,21 @@ public partial class MainWindow : Window
 
         Debug.WriteLine($"סה\"כ עמודים לשכפול (עמודים לקובץ × מספר עותקים) - צבעוני: {colorPagesTotal}, שחור-לבן: {blackAndWhitePagesTotal}");
 
+        // Manual-testing wiring only (§9.5 of docs/DESIGN.md) - writes to a dummy file
+        // on the Desktop, not the real shared production log.
+        ExcelRequestWriter.EnsureDummyWorkbookExists(DummyExcelLogPath);
+        var excelWriteSucceeded = _excelWriter.TryWrite(request, DummyExcelLogPath);
+        var excelStatusText = excelWriteSucceeded
+            ? $"נשמר ליומן הבדיקה:\n{DummyExcelLogPath}"
+            : "הכתיבה ליומן הבדיקה נכשלה - ראה Debug Output";
+
+        Debug.WriteLine(excelWriteSucceeded
+            ? $"נכתב ליומן האקסל הדמה: {DummyExcelLogPath}"
+            : "כתיבה ליומן האקסל הדמה נכשלה");
+
         MessageBox.Show(
             this,
-            "הבקשה נשלחה בהצלחה (בדיקה בלבד - טרם חובר backend אמיתי)",
+            $"הבקשה נשלחה בהצלחה (בדיקה בלבד - טרם חובר backend אמיתי)\n\n{excelStatusText}",
             "נשלח",
             MessageBoxButton.OK,
             MessageBoxImage.Information,
