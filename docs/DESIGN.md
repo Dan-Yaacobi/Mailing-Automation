@@ -144,10 +144,9 @@ Color/B&W is intentionally **not** on this object — it lives per file on
 | `FilePath` | string | full path to the original file on disk |
 | `FileName` | string | derived, shown in UI |
 | `FileKind` | enum `{ Pdf, Word, PowerPoint }` | derived from extension |
-| `DetectedPageCount` | int? | result of auto-detection; `null` if detection failed or isn't supported for the file type |
-| `DetectionSucceeded` | bool | drives the "לא זוהה אוטומטית" UI hint |
-| `ManualPageCount` | int? | set when the user edits the count; `null` until touched |
-| `EffectivePageCount` | int (computed) | `ManualPageCount ?? DetectedPageCount`; submission is blocked if this is null (user must supply a number when auto-detection fails) |
+| `DetectedPageCount` | int? | result of auto-detection; `null` if detection failed or isn't supported for the file type. Kept internally to compare against, not shown as its own column |
+| `PageCount` | int? | **the single field the user sees and edits**, pre-filled with `DetectedPageCount` when detection succeeds (empty otherwise). Revised from an earlier two-column "detected display + separate manual override" design, which read as confusing/unintuitive in testing - one editable value is simpler to reason about than two related-but-separate numbers. Submission is blocked if this is null (user must supply a number when auto-detection fails) |
+| `PageCountStatus` | string (computed) | read-only companion label next to the editable field: "זוהה אוטומטית" if `PageCount == DetectedPageCount` and non-null, "הוזן ידנית" if the user changed/entered it, "⚠ יש להזין מספר עמודים" (shown in red/bold) if still null |
 | `ColorMode` | enum `{ Color, BlackAndWhite }` | **Defaults to `BlackAndWhite`** for every newly-attached file (revised from the original "no default" decision after hands-on UI testing showed an empty selector reads as broken rather than deliberate). Still overridable per file, and via the "mark all" buttons |
 
 ### `SubmissionResult` (returned by the submit flow, drives the result screen)
@@ -299,7 +298,7 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 
 ```
 ┌───────────────────────────────────────────────┐
-│                בקשת הדפסה חדשה                  │
+│                בקשת שכפול חדשה                  │
 ├───────────────────────────────────────────────┤
 │  פרטי הבקשה                                     │
 │  שם התכנית:        [___________]                │
@@ -324,16 +323,17 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 └───────────────────────────────────────────────┘
 ```
 
-- The attachment grid: each row shows file name, the auto-detected page
-  count (or "לא זוהה אוטומטית" if detection failed), an editable numeric
-  field for the manual override, a Color/B&W selector defaulting to B&W for
-  every newly-attached file, and a remove button.
+- The attachment grid: each row shows file name, a single editable page-count
+  field (pre-filled from auto-detection when it succeeds), a read-only status
+  label next to it ("זוהה אוטומטית" / "הוזן ידנית" / a red "⚠ יש להזין מספר
+  עמודים" when still empty), a Color/B&W selector defaulting to B&W for every
+  newly-attached file, and a remove button.
 - "סמן הכל כצבעוני" / "סמן הכל כשחור-לבן" set `ColorMode` on every current
   attachment in one click; still overridable per row afterward.
 - "שלח בקשה" validates before submitting: at least one file attached, and
-  every attachment has a resolvable `EffectivePageCount` (detected or
-  manually entered) — otherwise it shows an error listing which files still
-  need a page count, rather than sending an incomplete request.
+  every attachment has a resolvable `PageCount` (detected or manually
+  entered) — otherwise it shows an error listing which files still need a
+  page count, rather than sending an incomplete request.
 
 ### 8.2 Confirmation Dialog
 
@@ -365,7 +365,7 @@ internal states within the same dialog (avoids stacking multiple popups):
   if at least one is, it's required and must be ≥ 1.
 - `Notes` is optional, no validation.
 - At least one attachment present.
-- Every attachment has a non-null `EffectivePageCount` (blocks submission with
+- Every attachment has a non-null `PageCount` (blocks submission with
   an error listing the offending files otherwise); `ColorMode` always has a
   value since it defaults to `BlackAndWhite`.
 
@@ -377,7 +377,7 @@ Runs after the user confirms in the dialog:
 1. Read current Outlook user (NameSpace.CurrentUser) → SubmittedByDisplayName/Email
 2. Compose & send primary email via OutlookEmailService
    - To: config.Recipient.PrimaryEmail
-   - Subject: "בקשת הדפסה - {ProgramName}"
+   - Subject: "בקשת שכפול - {ProgramName}"
    - HTML body, RTL (dir="rtl"), containing every request-level field and,
      per attached file, its name and color/B&W setting.
      Page counts are NOT included in this email — the person printing acts
@@ -455,7 +455,7 @@ path). `ExcelRequestWriter`:
 | שקפים בעמוד | `PrintRequest.SlidesPerPage` (blank if not applicable) |
 | הערות נוספות | `PrintRequest.Notes` |
 | שם קובץ | `AttachmentItem.FileName` |
-| מספר עמודים | `AttachmentItem.EffectivePageCount` |
+| מספר עמודים | `AttachmentItem.PageCount` |
 | צבעוני / שחור-לבן | `AttachmentItem.ColorMode` |
 
 The fallback email (§9.2 step 5) carries the same row-per-attachment data,
@@ -466,7 +466,7 @@ Excel by hand is a direct copy.
 
 | Failure | Handling |
 |---|---|
-| Word not installed / COM fails when counting a Word file | `DetectionSucceeded = false`, `DetectedPageCount = null`; UI shows "לא זוהה אוטומטית", user must type a page count manually. Does not block submission. |
+| Word not installed / COM fails when counting a Word file | `DetectedPageCount = null`; `PageCount` starts empty, `PageCountStatus` shows the red "⚠ יש להזין מספר עמודים" hint, user must type a page count manually. Does not block submission by itself (only an actually-empty `PageCount` at send time blocks). |
 | PDF unreadable/corrupt/encrypted | Same pattern — detection failure, manual entry required. |
 | PPTX slide count fails (corrupt file) | Same pattern. |
 | Legacy `.ppt` attached | Not auto-detected (§6.3); same manual-entry pattern. |

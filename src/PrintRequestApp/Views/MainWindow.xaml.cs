@@ -37,7 +37,7 @@ public partial class MainWindow : Window
         var dialog = new OpenFileDialog
         {
             Multiselect = true,
-            Filter = "קבצי הדפסה (*.pdf;*.doc;*.docx;*.ppt;*.pptx)|*.pdf;*.doc;*.docx;*.ppt;*.pptx"
+            Filter = "קבצי שכפול (*.pdf;*.doc;*.docx;*.ppt;*.pptx)|*.pdf;*.doc;*.docx;*.ppt;*.pptx"
         };
 
         if (dialog.ShowDialog(this) == true)
@@ -110,7 +110,7 @@ public partial class MainWindow : Window
     // field set and control types can be sanity-checked before wiring anything real.
     private void Send_Click(object sender, RoutedEventArgs e)
     {
-        var missingPageCount = Attachments.Where(a => a.EffectivePageCount is null).ToList();
+        var missingPageCount = Attachments.Where(a => a.PageCount is null).ToList();
         if (missingPageCount.Count > 0)
         {
             var fileList = string.Join("\n", missingPageCount.Select(a => $"  - {a.FileName}"));
@@ -138,7 +138,7 @@ public partial class MainWindow : Window
         var attachmentsSummary = Attachments.Count == 0
             ? "אין קבצים מצורפים"
             : string.Join("\n", Attachments.Select(a =>
-                $"  - {a.FileName}: {a.EffectivePageCount?.ToString() ?? "לא הוזן"} עמודים, " +
+                $"  - {a.FileName}: {a.PageCount?.ToString() ?? "לא הוזן"} עמודים, " +
                 (a.ColorMode == Core.Models.ColorMode.Color ? "צבעוני"
                     : a.ColorMode == Core.Models.ColorMode.BlackAndWhite ? "שחור-לבן"
                     : "לא נבחר")));

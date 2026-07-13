@@ -7,7 +7,7 @@ namespace PrintRequestApp.ViewModels;
 
 public sealed class AttachmentItemViewModel : INotifyPropertyChanged
 {
-    private int? _manualPageCount;
+    private int? _pageCount;
     private ColorMode? _colorMode = Core.Models.ColorMode.BlackAndWhite;
 
     public AttachmentItemViewModel(string filePath, FileKind fileKind, int? detectedPageCount)
@@ -16,6 +16,7 @@ public sealed class AttachmentItemViewModel : INotifyPropertyChanged
         FileName = Path.GetFileName(filePath);
         FileKind = fileKind;
         DetectedPageCount = detectedPageCount;
+        _pageCount = detectedPageCount;
     }
 
     public string FilePath { get; }
@@ -26,25 +27,41 @@ public sealed class AttachmentItemViewModel : INotifyPropertyChanged
 
     public int? DetectedPageCount { get; }
 
-    public string DetectedPageCountDisplay => DetectedPageCount?.ToString() ?? "לא זוהה אוטומטית";
-
-    public int? ManualPageCount
+    // The one field the user actually looks at and edits - pre-filled from
+    // detection when available, so there's a single number to reason about
+    // instead of a separate "detected" display next to a separate "override" box.
+    public int? PageCount
     {
-        get => _manualPageCount;
+        get => _pageCount;
         set
         {
-            if (_manualPageCount == value)
+            if (_pageCount == value)
             {
                 return;
             }
 
-            _manualPageCount = value;
+            _pageCount = value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(EffectivePageCount));
+            OnPropertyChanged(nameof(PageCountStatus));
         }
     }
 
-    public int? EffectivePageCount => ManualPageCount ?? DetectedPageCount;
+    // Read-only companion label explaining where PageCount came from, or that
+    // it's still missing - drives the red "needs attention" highlight too.
+    public string PageCountStatus
+    {
+        get
+        {
+            if (PageCount is null)
+            {
+                return "⚠ יש להזין מספר עמודים";
+            }
+
+            return DetectedPageCount is not null && PageCount == DetectedPageCount
+                ? "זוהה אוטומטית"
+                : "הוזן ידנית";
+        }
+    }
 
     public ColorMode? ColorMode
     {
