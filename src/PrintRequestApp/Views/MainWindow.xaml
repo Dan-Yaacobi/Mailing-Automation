@@ -175,5 +175,39 @@
                     Padding="12,6"
                     Click="Send_Click" />
         </StackPanel>
+
+        <!-- Shown while page counting runs on a background thread (§3 of docs/DESIGN.md -
+             Office COM calls run off the UI thread so this can actually animate, and so
+             the window doesn't look frozen during the few seconds Word/PDF/PPTX counting
+             can take). Covers the whole window and blocks input to it while visible. -->
+        <Border x:Name="LoadingOverlay"
+                Grid.Row="0" Grid.RowSpan="4"
+                Background="#AA000000"
+                Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Ellipse Width="48" Height="48"
+                         Stroke="White" StrokeThickness="4"
+                         StrokeDashArray="7 2.5" StrokeDashCap="Round">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform x:Name="LoadingSpinnerRotate" CenterX="24" CenterY="24" />
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetName="LoadingSpinnerRotate"
+                                                     Storyboard.TargetProperty="Angle"
+                                                     From="0" To="360" Duration="0:0:0.9"
+                                                     RepeatBehavior="Forever" />
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+                <TextBlock x:Name="LoadingStatusText"
+                           Foreground="White" FontSize="14"
+                           Margin="0,14,0,0" HorizontalAlignment="Center" />
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

@@ -108,12 +108,15 @@ DependencyInjection`, set up in `App.xaml.cs`).
 ### Threading note for Office COM
 
 Office COM objects are single-threaded apartment (STA). The WPF UI thread
-is already STA, so short COM calls can run there, but page-counting a batch
-of Word documents or sending mail should not block the UI. The design runs
-these operations on a dedicated background thread that is explicitly
-created with `ApartmentState.STA` (not the default MTA thread pool), with
-the ViewModel awaiting a `TaskCompletionSource` bridged from that thread.
-The UI shows a busy indicator during these calls (see §8).
+is already STA, so short COM calls can run there, but page-counting (Word
+in particular, which spins up a real `WINWORD.EXE` process) should not
+block the UI. **Implemented**: attachment page counting runs on a
+dedicated background thread explicitly created with `ApartmentState.STA`
+(not the default MTA thread pool), bridged back via a
+`TaskCompletionSource` that the UI `await`s. A full-window overlay (a
+rotating ring + status text naming the file currently being processed) is
+shown for the duration and blocks input to the rest of the form — it can
+only animate at all because the UI thread stays free during the COM call.
 
 ## 4. Data Model
 
@@ -355,6 +358,11 @@ Single window, `FlowDirection=RightToLeft`, roughly:
   every attachment has a resolvable `PageCount` (detected or manually
   entered) — otherwise it shows an error listing which files still need a
   page count, rather than sending an incomplete request.
+- While a newly-added file's page count is being detected, a full-window
+  overlay (rotating ring + "מזהה מספר עמודים: {file name}") covers the form
+  and blocks input until it's done — added specifically because Word
+  counting can take several real seconds and an unresponsive-looking window
+  otherwise reads as frozen.
 
 ### 8.2 Confirmation Dialog
 
