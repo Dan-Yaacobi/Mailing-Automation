@@ -3,12 +3,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{DynamicResource Str_MainWindowTitle}"
         FlowDirection="RightToLeft"
-        Height="600" Width="800"
+        Height="700" Width="800"
+        MinHeight="600" MinWidth="700"
         WindowStartupLocation="CenterScreen">
     <Grid Margin="16">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="2*" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
@@ -18,12 +19,83 @@
                    FontSize="22" FontWeight="Bold"
                    Margin="0,0,0,16" />
 
-        <!-- Placeholder for the request-level form fields (§8.1 of docs/DESIGN.md) -->
+        <!-- Request-level form fields (§8.1 / §4 of docs/DESIGN.md). No validation or
+             backend wiring yet - Send just logs/shows what was collected. -->
         <GroupBox Grid.Row="1" Header="{DynamicResource Str_RequestDetailsSectionTitle}" Margin="0,0,0,16">
-            <TextBlock Text="{DynamicResource Str_RequestDetailsPlaceholder}"
-                       TextWrapping="Wrap"
-                       Foreground="Gray"
-                       Margin="8" />
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="220" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{DynamicResource Str_Field_ProgramName}" VerticalAlignment="Center" Margin="0,6" />
+                    <TextBox   Grid.Row="0" Grid.Column="1" x:Name="TxtProgramName" Margin="4,6" />
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{DynamicResource Str_Field_BudgetLine}" VerticalAlignment="Center" Margin="0,6" />
+                    <TextBox   Grid.Row="1" Grid.Column="1" x:Name="TxtBudgetLine" Margin="4,6" />
+
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Str_Field_CopiesCount}" VerticalAlignment="Center" Margin="0,6" />
+                    <TextBox   Grid.Row="2" Grid.Column="1" x:Name="TxtCopiesCount"
+                               Margin="4,6" Width="80" HorizontalAlignment="Left"
+                               FlowDirection="LeftToRight" TextAlignment="Right"
+                               MaxLength="4"
+                               PreviewTextInput="NumericTextBox_PreviewTextInput" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Str_Field_HolePunch}" VerticalAlignment="Center" Margin="0,6" />
+                    <ComboBox  Grid.Row="3" Grid.Column="1" x:Name="CmbHolePunch" Margin="4,6" Width="100" HorizontalAlignment="Left" SelectedIndex="0">
+                        <ComboBoxItem Content="{DynamicResource Str_NoOption}" />
+                        <ComboBoxItem Content="{DynamicResource Str_YesOption}" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{DynamicResource Str_Field_DoubleSided}" VerticalAlignment="Center" Margin="0,6" />
+                    <ComboBox  Grid.Row="4" Grid.Column="1" x:Name="CmbDoubleSided" Margin="4,6" Width="100" HorizontalAlignment="Left" SelectedIndex="0">
+                        <ComboBoxItem Content="{DynamicResource Str_NoOption}" />
+                        <ComboBoxItem Content="{DynamicResource Str_YesOption}" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="5" Grid.Column="0" Text="{DynamicResource Str_Field_Stapling}" VerticalAlignment="Center" Margin="0,6" />
+                    <ComboBox  Grid.Row="5" Grid.Column="1" x:Name="CmbStapling" Margin="4,6" Width="100" HorizontalAlignment="Left" SelectedIndex="0">
+                        <ComboBoxItem Content="{DynamicResource Str_NoOption}" />
+                        <ComboBoxItem Content="{DynamicResource Str_YesOption}" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource Str_Field_PageType}" VerticalAlignment="Center" Margin="0,6" />
+                    <ComboBox  Grid.Row="6" Grid.Column="1" x:Name="CmbPageType" Margin="4,6" Width="100" HorizontalAlignment="Left" SelectedIndex="0">
+                        <ComboBoxItem Content="A4" />
+                        <ComboBoxItem Content="A3" />
+                        <ComboBoxItem Content="A5" />
+                        <ComboBoxItem Content="A2" />
+                        <ComboBoxItem Content="A1" />
+                        <ComboBoxItem Content="A0" />
+                        <ComboBoxItem Content="A6" />
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource Str_Field_SlidesPerPage}" VerticalAlignment="Center" Margin="0,6" TextWrapping="Wrap" />
+                    <TextBox   Grid.Row="7" Grid.Column="1" x:Name="TxtSlidesPerPage"
+                               Margin="4,6" Width="80" HorizontalAlignment="Left"
+                               FlowDirection="LeftToRight" TextAlignment="Right"
+                               MaxLength="3"
+                               PreviewTextInput="NumericTextBox_PreviewTextInput" />
+
+                    <TextBlock Grid.Row="8" Grid.Column="0" Text="{DynamicResource Str_Field_Notes}" VerticalAlignment="Top" Margin="0,6" />
+                    <TextBox   Grid.Row="8" Grid.Column="1" x:Name="TxtNotes"
+                               Margin="4,6" Height="70"
+                               TextWrapping="Wrap" AcceptsReturn="True"
+                               VerticalScrollBarVisibility="Auto" />
+                </Grid>
+            </ScrollViewer>
         </GroupBox>
 
         <!-- Placeholder for the attachment list section (§8.1 of docs/DESIGN.md) -->
@@ -40,7 +112,7 @@
                     Click="OpenConfirmationPreview_Click" />
             <Button Content="{DynamicResource Str_SendButton}"
                     Padding="12,6"
-                    IsEnabled="False" />
+                    Click="Send_Click" />
         </StackPanel>
     </Grid>
 </Window>
