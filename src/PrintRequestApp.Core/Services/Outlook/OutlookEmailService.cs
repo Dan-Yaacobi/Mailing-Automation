@@ -34,7 +34,7 @@ public sealed class OutlookEmailService : IOutlookEmailService
             mailItem = outlookApp!.CreateItem(OlMailItem);
 
             mailItem.To = recipientEmail;
-            mailItem.Subject = $"בקשת שכפול - {request.ProgramName}";
+            mailItem.Subject = "בקשת שכפול";
             mailItem.HTMLBody = BuildHtmlBody(request);
 
             foreach (var attachment in request.Attachments)
@@ -64,15 +64,21 @@ public sealed class OutlookEmailService : IOutlookEmailService
         }
     }
 
+    // Outlook renders HTML mail through Word's engine, which doesn't reliably cascade
+    // font-family from <body> down to <table>/<li> etc. - every element gets the font
+    // inline rather than relying on inheritance (this is why the title only rendered
+    // in Segoe UI while everything else fell back to Times New Roman).
+    private const string FontStyle = "font-family:'Segoe UI',sans-serif;font-size:14px;";
+
     // Page counts are deliberately excluded here - the person printing acts on file +
     // color/B&W + copies/finishing options, not page count, which is tracking data
     // for the Excel log rather than a printing instruction (per earlier discussion).
+    // No title - it was redundant with שם התכנית already being the first field row.
     private static string BuildHtmlBody(PrintRequest request)
     {
         var html = new StringBuilder();
-        html.Append("<html dir=\"rtl\"><body style=\"font-family:'Segoe UI',sans-serif;font-size:14px;\">");
-        html.Append($"<h2>בקשת שכפול - {WebUtility.HtmlEncode(request.ProgramName)}</h2>");
-        html.Append("<table cellpadding=\"4\">");
+        html.Append($"<html dir=\"rtl\"><body style=\"{FontStyle}\">");
+        html.Append($"<table cellpadding=\"4\" style=\"{FontStyle}\">");
 
         AppendRow(html, "שם התכנית", request.ProgramName);
         AppendRow(html, "סעיף תקציבי", request.BudgetLine);
@@ -93,12 +99,19 @@ public sealed class OutlookEmailService : IOutlookEmailService
         }
 
         html.Append("</table>");
-        html.Append("<h3>קבצים מצורפים</h3><ul>");
+        html.Append($"<h3 style=\"{FontStyle}\">קבצים מצורפים</h3>");
+        html.Append($"<ul style=\"{FontStyle}\">");
 
         foreach (var attachment in request.Attachments)
         {
+            // File name and color as separate nested list items rather than one
+            // "name - color" line - mixing a Latin file name with Hebrew color text
+            // on the same line jumbled visually in the email client, same issue and
+            // same fix as the confirmation dialog's attachment rows.
             var colorText = attachment.ColorMode == ColorMode.Color ? "צבעוני" : "שחור-לבן";
-            html.Append($"<li>{WebUtility.HtmlEncode(attachment.FileName)} - {colorText}</li>");
+            html.Append($"<li style=\"{FontStyle}\">{WebUtility.HtmlEncode(attachment.FileName)}");
+            html.Append($"<ul style=\"{FontStyle}\"><li style=\"{FontStyle}\">{WebUtility.HtmlEncode(colorText)}</li></ul>");
+            html.Append("</li>");
         }
 
         html.Append("</ul></body></html>");
@@ -107,9 +120,9 @@ public sealed class OutlookEmailService : IOutlookEmailService
 
     private static void AppendRow(StringBuilder html, string label, string value)
     {
-        html.Append("<tr><td style=\"font-weight:bold;\">");
+        html.Append($"<tr><td style=\"{FontStyle}font-weight:bold;\">");
         html.Append(WebUtility.HtmlEncode(label));
-        html.Append("</td><td>");
+        html.Append($"</td><td style=\"{FontStyle}\">");
         html.Append(WebUtility.HtmlEncode(value));
         html.Append("</td></tr>");
     }
