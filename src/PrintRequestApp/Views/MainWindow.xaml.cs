@@ -22,24 +22,6 @@ public partial class MainWindow : Window
         dialog.ShowDialog();
     }
 
-    // Disables the blank-page field whenever "cover page" is answered "no" -
-    // that field is only meaningful when there is a cover page (§4 of docs/DESIGN.md).
-    private void CmbHasCoverPage_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (CmbBlankPageBetweenCoverAndContent == null)
-        {
-            // Fires once during InitializeComponent, before this later-declared
-            // control exists yet.
-            return;
-        }
-
-        CmbBlankPageBetweenCoverAndContent.IsEnabled = CmbHasCoverPage.SelectedIndex == 1;
-        if (!CmbBlankPageBetweenCoverAndContent.IsEnabled)
-        {
-            CmbBlankPageBetweenCoverAndContent.SelectedIndex = 0;
-        }
-    }
-
     private void NumericTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
         e.Handled = !e.Text.All(char.IsDigit);
@@ -55,20 +37,20 @@ public partial class MainWindow : Window
         var holePunch = IsYes(CmbHolePunch);
         var doubleSided = IsYes(CmbDoubleSided);
         var stapling = IsYes(CmbStapling);
-        var hasCoverPage = IsYes(CmbHasCoverPage);
-        var blankPageBetweenCoverAndContent = hasCoverPage && IsYes(CmbBlankPageBetweenCoverAndContent);
+        var pageType = (CmbPageType.SelectedItem as ComboBoxItem)?.Content as string;
         int? slidesPerPage = int.TryParse(TxtSlidesPerPage.Text, out var slides) ? slides : null;
+        var notes = TxtNotes.Text;
 
         var summary =
             $"שם התכנית: {programName}\n" +
             $"סעיף תקציבי: {budgetLine}\n" +
             $"מספר עותקים: {copiesCount}\n" +
             $"חירור: {YesNoText(holePunch)}\n" +
-            $"דו צדדי: {YesNoText(doubleSided)}\n" +
+            $"דו\"צ: {YesNoText(doubleSided)}\n" +
             $"הידוק: {YesNoText(stapling)}\n" +
-            $"יש או אין דף פתיח: {YesNoText(hasCoverPage)}\n" +
-            $"עמוד ריק בין דף פתיחה לתוכן: {(hasCoverPage ? YesNoText(blankPageBetweenCoverAndContent) : "לא רלוונטי")}\n" +
-            $"שקפים בעמוד: {(slidesPerPage?.ToString() ?? "לא הוזן")}";
+            $"סוג דף: {pageType}\n" +
+            $"שקפים בעמוד: {(slidesPerPage?.ToString() ?? "לא הוזן")}\n" +
+            $"הערות נוספות: {(string.IsNullOrWhiteSpace(notes) ? "אין" : notes)}";
 
         Debug.WriteLine("=== נתוני הבקשה שנאספו (טרם נשלח בפועל) ===");
         Debug.WriteLine(summary);

@@ -9,11 +9,11 @@
     <sys:String x:Key="Str_Field_BudgetLine">סעיף תקציבי</sys:String>
     <sys:String x:Key="Str_Field_CopiesCount">מספר עותקים</sys:String>
     <sys:String x:Key="Str_Field_HolePunch">חירור</sys:String>
-    <sys:String x:Key="Str_Field_DoubleSided">דו צדדי</sys:String>
+    <sys:String x:Key="Str_Field_DoubleSided">דו"צ</sys:String>
     <sys:String x:Key="Str_Field_Stapling">הידוק</sys:String>
-    <sys:String x:Key="Str_Field_HasCoverPage">יש או אין דף פתיח</sys:String>
-    <sys:String x:Key="Str_Field_BlankPage">האם להשאיר עמוד ריק בין דף פתיחה לתוכן</sys:String>
-    <sys:String x:Key="Str_Field_SlidesPerPage">כמה שקפים בעמוד (אם נשלח כ-PPT)</sys:String>
+    <sys:String x:Key="Str_Field_PageType">סוג דף</sys:String>
+    <sys:String x:Key="Str_Field_SlidesPerPage">(אם נשלח כ PPT) כמה שקפים בעמוד</sys:String>
+    <sys:String x:Key="Str_Field_Notes">הערות נוספות</sys:String>
     <sys:String x:Key="Str_YesOption">כן</sys:String>
     <sys:String x:Key="Str_NoOption">לא</sys:String>
 

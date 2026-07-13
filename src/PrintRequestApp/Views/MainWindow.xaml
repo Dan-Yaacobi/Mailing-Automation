@@ -71,26 +71,29 @@
                         <ComboBoxItem Content="{DynamicResource Str_YesOption}" />
                     </ComboBox>
 
-                    <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource Str_Field_HasCoverPage}" VerticalAlignment="Center" Margin="0,6" TextWrapping="Wrap" />
-                    <ComboBox  Grid.Row="6" Grid.Column="1" x:Name="CmbHasCoverPage" Margin="4,6" Width="100" HorizontalAlignment="Left"
-                               SelectedIndex="0" SelectionChanged="CmbHasCoverPage_SelectionChanged">
-                        <ComboBoxItem Content="{DynamicResource Str_NoOption}" />
-                        <ComboBoxItem Content="{DynamicResource Str_YesOption}" />
+                    <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource Str_Field_PageType}" VerticalAlignment="Center" Margin="0,6" />
+                    <ComboBox  Grid.Row="6" Grid.Column="1" x:Name="CmbPageType" Margin="4,6" Width="100" HorizontalAlignment="Left" SelectedIndex="0">
+                        <ComboBoxItem Content="A4" />
+                        <ComboBoxItem Content="A3" />
+                        <ComboBoxItem Content="A5" />
+                        <ComboBoxItem Content="A2" />
+                        <ComboBoxItem Content="A1" />
+                        <ComboBoxItem Content="A0" />
+                        <ComboBoxItem Content="A6" />
                     </ComboBox>
 
-                    <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource Str_Field_BlankPage}" VerticalAlignment="Center" Margin="0,6" TextWrapping="Wrap" />
-                    <ComboBox  Grid.Row="7" Grid.Column="1" x:Name="CmbBlankPageBetweenCoverAndContent" Margin="4,6" Width="100" HorizontalAlignment="Left"
-                               SelectedIndex="0" IsEnabled="False">
-                        <ComboBoxItem Content="{DynamicResource Str_NoOption}" />
-                        <ComboBoxItem Content="{DynamicResource Str_YesOption}" />
-                    </ComboBox>
-
-                    <TextBlock Grid.Row="8" Grid.Column="0" Text="{DynamicResource Str_Field_SlidesPerPage}" VerticalAlignment="Center" Margin="0,6" TextWrapping="Wrap" />
-                    <TextBox   Grid.Row="8" Grid.Column="1" x:Name="TxtSlidesPerPage"
+                    <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource Str_Field_SlidesPerPage}" VerticalAlignment="Center" Margin="0,6" TextWrapping="Wrap" />
+                    <TextBox   Grid.Row="7" Grid.Column="1" x:Name="TxtSlidesPerPage"
                                Margin="4,6" Width="80" HorizontalAlignment="Left"
                                FlowDirection="LeftToRight" TextAlignment="Right"
                                MaxLength="3"
                                PreviewTextInput="NumericTextBox_PreviewTextInput" />
+
+                    <TextBlock Grid.Row="8" Grid.Column="0" Text="{DynamicResource Str_Field_Notes}" VerticalAlignment="Top" Margin="0,6" />
+                    <TextBox   Grid.Row="8" Grid.Column="1" x:Name="TxtNotes"
+                               Margin="4,6" Height="70"
+                               TextWrapping="Wrap" AcceptsReturn="True"
+                               VerticalScrollBarVisibility="Auto" />
                 </Grid>
             </ScrollViewer>
         </GroupBox>

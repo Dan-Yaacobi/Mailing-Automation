@@ -125,11 +125,11 @@ The UI shows a busy indicator during these calls (see §8).
 | `BudgetLine` | string | סעיף תקציבי | required |
 | `CopiesCount` | int | מספר עותקים | required, ≥ 1 |
 | `HolePunch` | bool | חירור | default false |
-| `DoubleSided` | bool | דו צדדי | default false |
+| `DoubleSided` | bool | דו"צ | default false |
 | `Stapling` | bool | הידוק | default false |
-| `HasCoverPage` | bool | יש/אין דף פתיח | default false |
-| `BlankPageBetweenCoverAndContent` | bool | האם להשאיר עמוד ריק בין דף פתיחה לתוכן | only meaningful/enabled when `HasCoverPage == true` |
+| `PageType` | enum (paper size) | סוג דף | closed dropdown of paper sizes. Most-used sizes (A4, A3, A5) pinned at the top, A4 selected by default; remaining ISO sizes (A2, A1, A0, A6) listed below for edge cases. Replaces the earlier cover-page fields (`HasCoverPage` / `BlankPageBetweenCoverAndContent`) — the cover-page concept is legacy and no longer used by requesters |
 | `SlidesPerPage` | int? | (אם נשלח כ‑PPT) כמה שקפים בעמוד | only required/shown when at least one attachment is a PPT/PPTX |
+| `Notes` | string? | הערות נוספות | free-text, optional |
 | `Attachments` | `List<AttachmentItem>` | קבצים מצורפים | required, ≥ 1 item |
 | `SubmittedByDisplayName` / `SubmittedByEmail` | string | — | **not a form field.** Read automatically from the current Outlook session (`NameSpace.CurrentUser`) at submit time, used only for the Excel log / fallback email "requested by" column. No manual entry needed since Outlook already knows who is sending. |
 | `SubmittedAtUtc` | DateTime | — | set at submission time |
@@ -306,11 +306,11 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 │  סעיף תקציבי:       [___________]                │
 │  מספר עותקים:       [___]                        │
 │  חירור:            ( ) כן  ( ) לא                 │
-│  דו צדדי:           ( ) כן  ( ) לא                 │
+│  דו"צ:              ( ) כן  ( ) לא                 │
 │  הידוק:             ( ) כן  ( ) לא                 │
-│  יש דף פתיח:        ( ) כן  ( ) לא                 │
-│    ↳ עמוד ריק בין דף פתיחה לתוכן: ( ) כן ( ) לא    │  ← enabled only if the row above is כן
+│  סוג דף:            [A4 ▾]                         │
 │  שקפים בעמוד (PPT בלבד): [___]                    │  ← shown only once a PPT/PPTX is attached
+│  הערות נוספות:      [___________]                 │
 ├───────────────────────────────────────────────┤
 │  קבצים מצורפים                [הוסף קובץ]        │
 │  [סמן הכל כצבעוני]  [סמן הכל כשחור-לבן]           │
@@ -362,10 +362,10 @@ internal states within the same dialog (avoids stacking multiple popups):
 
 - `ProgramName`, `BudgetLine` non-empty.
 - `CopiesCount ≥ 1`.
-- If `HasCoverPage == false`, `BlankPageBetweenCoverAndContent` is forced
-  to `false`/disabled in the UI (not user-editable).
+- `PageType` always has a value (defaults to A4).
 - If no attachment is a PowerPoint file, `SlidesPerPage` is hidden/ignored;
   if at least one is, it's required and must be ≥ 1.
+- `Notes` is optional, no validation.
 - At least one attachment present.
 - Every attachment has `ColorMode` set and a non-null `EffectivePageCount`.
 
@@ -451,8 +451,9 @@ path). `ExcelRequestWriter`:
 | שם התכנית | `PrintRequest.ProgramName` |
 | סעיף תקציבי | `PrintRequest.BudgetLine` |
 | מספר עותקים | `PrintRequest.CopiesCount` |
-| חירור / דו צדדי / הידוק / דף פתיח / עמוד ריק | request-level flags, repeated on every row for that request |
+| חירור / דו"צ / הידוק / סוג דף | request-level flags, repeated on every row for that request |
 | שקפים בעמוד | `PrintRequest.SlidesPerPage` (blank if not applicable) |
+| הערות נוספות | `PrintRequest.Notes` |
 | שם קובץ | `AttachmentItem.FileName` |
 | מספר עמודים | `AttachmentItem.EffectivePageCount` |
 | צבעוני / שחור-לבן | `AttachmentItem.ColorMode` |
