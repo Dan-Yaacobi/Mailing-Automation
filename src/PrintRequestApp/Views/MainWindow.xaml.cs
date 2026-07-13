@@ -223,6 +223,23 @@ public partial class MainWindow : Window
             MessageBoxImage.Information,
             MessageBoxResult.OK,
             MessageBoxOptions.RtlReading);
+
+        ResetForm();
+    }
+
+    // Ready for the next request: clears every field and every attached file.
+    private void ResetForm()
+    {
+        TxtProgramName.Clear();
+        TxtBudgetLine.Clear();
+        TxtCopiesCount.Clear();
+        CmbHolePunch.SelectedIndex = 0;
+        CmbDoubleSided.SelectedIndex = 0;
+        CmbStapling.SelectedIndex = 0;
+        CmbPageType.SelectedIndex = 0;
+        TxtSlidesPerPage.Clear();
+        TxtNotes.Clear();
+        Attachments.Clear();
     }
 
     private static bool IsYes(ComboBox comboBox) => comboBox.SelectedIndex == 1;

@@ -48,7 +48,7 @@
                     <TextBlock Grid.Row="1" Grid.Column="1" x:Name="TxtBudgetLineValue" Margin="0,4" TextWrapping="Wrap" />
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Text="{DynamicResource Str_Field_CopiesCount}" FontWeight="Bold" Margin="0,4" />
-                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtCopiesCountValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtCopiesCountValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{DynamicResource Str_Field_HolePunch}" FontWeight="Bold" Margin="0,4" />
                     <TextBlock Grid.Row="3" Grid.Column="1" x:Name="TxtHolePunchValue" Margin="0,4" />
@@ -60,10 +60,10 @@
                     <TextBlock Grid.Row="5" Grid.Column="1" x:Name="TxtStaplingValue" Margin="0,4" />
 
                     <TextBlock Grid.Row="6" Grid.Column="0" Text="{DynamicResource Str_Field_PageType}" FontWeight="Bold" Margin="0,4" />
-                    <TextBlock Grid.Row="6" Grid.Column="1" x:Name="TxtPageTypeValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Row="6" Grid.Column="1" x:Name="TxtPageTypeValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
 
                     <TextBlock Grid.Row="7" Grid.Column="0" Text="{DynamicResource Str_Field_SlidesPerPage}" FontWeight="Bold" Margin="0,4" TextWrapping="Wrap" />
-                    <TextBlock Grid.Row="7" Grid.Column="1" x:Name="TxtSlidesPerPageValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Row="7" Grid.Column="1" x:Name="TxtSlidesPerPageValue" Margin="0,4" FlowDirection="LeftToRight" HorizontalAlignment="Left" />
 
                     <TextBlock Grid.Row="8" Grid.Column="0" Text="{DynamicResource Str_Field_Notes}" FontWeight="Bold" Margin="0,4" VerticalAlignment="Top" />
                     <TextBlock Grid.Row="8" Grid.Column="1" x:Name="TxtNotesValue" Margin="0,4" TextWrapping="Wrap" />
