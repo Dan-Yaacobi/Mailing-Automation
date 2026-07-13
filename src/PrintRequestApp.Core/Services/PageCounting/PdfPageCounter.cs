@@ -11,7 +11,9 @@ public sealed class PdfPageCounter : IPageCounter
     {
         try
         {
-            using var document = PdfReader.Open(filePath, PdfDocumentOpenMode.InformationOnly);
+            // InformationOnly is documented by PdfSharp itself as not actually
+            // implemented; Import is the library's own recommended replacement.
+            using var document = PdfReader.Open(filePath, PdfDocumentOpenMode.Import);
             return document.PageCount;
         }
         catch

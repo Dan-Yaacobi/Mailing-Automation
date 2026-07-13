@@ -31,7 +31,11 @@ public sealed class WordPageCounter : IPageCounter
             // document that hasn't been repaginated since it was last edited -
             // Repaginate() first guarantees an accurate, live count (§6.2 of docs/DESIGN.md).
             document.Repaginate();
-            return document.ComputedStatistics(WdStatistic.wdStatisticPages);
+
+            // Late-bound: this PIA version doesn't statically expose ComputedStatistics,
+            // but the real Word COM object supports it via IDispatch regardless.
+            dynamic dynamicDocument = document;
+            return (int)dynamicDocument.ComputedStatistics(WdStatistic.wdStatisticPages);
         }
         catch
         {

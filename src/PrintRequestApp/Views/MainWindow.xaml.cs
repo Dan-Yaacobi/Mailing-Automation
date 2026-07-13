@@ -110,6 +110,32 @@ public partial class MainWindow : Window
     // field set and control types can be sanity-checked before wiring anything real.
     private void Send_Click(object sender, RoutedEventArgs e)
     {
+        if (!int.TryParse(TxtCopiesCount.Text, out var copiesCount) || copiesCount < 1)
+        {
+            MessageBox.Show(
+                this,
+                "יש להזין מספר עותקים תקין (1 ומעלה)",
+                "שגיאה - מספר עותקים חסר",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error,
+                MessageBoxResult.OK,
+                MessageBoxOptions.RtlReading);
+            return;
+        }
+
+        if (Attachments.Count == 0)
+        {
+            MessageBox.Show(
+                this,
+                "לא ניתן לשלוח בקשה ללא קבצים מצורפים",
+                "שגיאה - אין קבצים מצורפים",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error,
+                MessageBoxResult.OK,
+                MessageBoxOptions.RtlReading);
+            return;
+        }
+
         var missingPageCount = Attachments.Where(a => a.PageCount is null).ToList();
         if (missingPageCount.Count > 0)
         {
@@ -127,7 +153,6 @@ public partial class MainWindow : Window
 
         var programName = TxtProgramName.Text;
         var budgetLine = TxtBudgetLine.Text;
-        int.TryParse(TxtCopiesCount.Text, out var copiesCount);
         var holePunch = IsYes(CmbHolePunch);
         var doubleSided = IsYes(CmbDoubleSided);
         var stapling = IsYes(CmbStapling);
@@ -135,13 +160,11 @@ public partial class MainWindow : Window
         int? slidesPerPage = int.TryParse(TxtSlidesPerPage.Text, out var slides) ? slides : null;
         var notes = TxtNotes.Text;
 
-        var attachmentsSummary = Attachments.Count == 0
-            ? "אין קבצים מצורפים"
-            : string.Join("\n", Attachments.Select(a =>
-                $"  - {a.FileName}: {a.PageCount?.ToString() ?? "לא הוזן"} עמודים, " +
-                (a.ColorMode == Core.Models.ColorMode.Color ? "צבעוני"
-                    : a.ColorMode == Core.Models.ColorMode.BlackAndWhite ? "שחור-לבן"
-                    : "לא נבחר")));
+        var attachmentsSummary = string.Join("\n", Attachments.Select(a =>
+            $"  - {a.FileName}: {a.PageCount?.ToString() ?? "לא הוזן"} עמודים, " +
+            (a.ColorMode == Core.Models.ColorMode.Color ? "צבעוני"
+                : a.ColorMode == Core.Models.ColorMode.BlackAndWhite ? "שחור-לבן"
+                : "לא נבחר")));
 
         var summary =
             $"שם התכנית: {programName}\n" +
