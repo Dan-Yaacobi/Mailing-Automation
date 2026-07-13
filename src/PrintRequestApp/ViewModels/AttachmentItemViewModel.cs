@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -98,6 +99,30 @@ public sealed class AttachmentItemViewModel : INotifyPropertyChanged
                 _ => (Core.Models.ColorMode?)null
             };
         }
+    }
+
+    // Only valid to call once PageCount and ColorMode are both set - guaranteed by
+    // Send_Click's validation before any attachment reaches the confirmation dialog.
+    public AttachmentItem ToAttachmentItem()
+    {
+        if (PageCount is null)
+        {
+            throw new InvalidOperationException($"'{FileName}' has no page count set.");
+        }
+
+        if (ColorMode is null)
+        {
+            throw new InvalidOperationException($"'{FileName}' has no color mode set.");
+        }
+
+        return new AttachmentItem
+        {
+            FilePath = FilePath,
+            FileName = FileName,
+            FileKind = FileKind,
+            PageCount = PageCount.Value,
+            ColorMode = ColorMode.Value
+        };
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

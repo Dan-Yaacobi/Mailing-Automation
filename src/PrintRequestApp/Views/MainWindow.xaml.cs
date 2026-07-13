@@ -192,46 +192,33 @@ public partial class MainWindow : Window
             return;
         }
 
-        var programName = TxtProgramName.Text;
-        var budgetLine = TxtBudgetLine.Text;
-        var holePunch = IsYes(CmbHolePunch);
-        var doubleSided = IsYes(CmbDoubleSided);
-        var stapling = IsYes(CmbStapling);
-        var pageType = (CmbPageType.SelectedItem as ComboBoxItem)?.Content as string;
-        int? slidesPerPage = int.TryParse(TxtSlidesPerPage.Text, out var slides) ? slides : null;
-        var notes = TxtNotes.Text;
+        var pageTypeText = (string)((ComboBoxItem)CmbPageType.SelectedItem).Content;
+        var request = new Core.Models.PrintRequest
+        {
+            ProgramName = TxtProgramName.Text,
+            BudgetLine = TxtBudgetLine.Text,
+            CopiesCount = copiesCount,
+            HolePunch = IsYes(CmbHolePunch),
+            DoubleSided = IsYes(CmbDoubleSided),
+            Stapling = IsYes(CmbStapling),
+            PageType = Enum.Parse<Core.Models.PaperSize>(pageTypeText),
+            SlidesPerPage = int.TryParse(TxtSlidesPerPage.Text, out var slides) ? slides : null,
+            Notes = string.IsNullOrWhiteSpace(TxtNotes.Text) ? null : TxtNotes.Text,
+            Attachments = Attachments.Select(a => a.ToAttachmentItem()).ToList()
+        };
 
-        var attachmentsSummary = string.Join("\n", Attachments.Select(a =>
-            $"  - {a.FileName}: {a.PageCount?.ToString() ?? "לא הוזן"} עמודים, " +
-            (a.ColorMode == Core.Models.ColorMode.Color ? "צבעוני"
-                : a.ColorMode == Core.Models.ColorMode.BlackAndWhite ? "שחור-לבן"
-                : "לא נבחר")));
-
-        var summary =
-            $"שם התכנית: {programName}\n" +
-            $"סעיף תקציבי: {budgetLine}\n" +
-            $"מספר עותקים: {copiesCount}\n" +
-            $"חירור: {YesNoText(holePunch)}\n" +
-            $"דו\"צ: {YesNoText(doubleSided)}\n" +
-            $"הידוק: {YesNoText(stapling)}\n" +
-            $"סוג דף: {pageType}\n" +
-            $"שקפים בעמוד: {(slidesPerPage?.ToString() ?? "לא הוזן")}\n" +
-            $"הערות נוספות: {(string.IsNullOrWhiteSpace(notes) ? "אין" : notes)}\n\n" +
-            $"קבצים מצורפים ({Attachments.Count}):\n{attachmentsSummary}";
-
-        var confirmationDialog = new ConfirmationDialog(summary) { Owner = this };
+        var confirmationDialog = new ConfirmationDialog(request) { Owner = this };
         if (confirmationDialog.ShowDialog() != true)
         {
             return;
         }
 
-        Debug.WriteLine("=== נתוני הבקשה שנאספו (טרם נשלח בפועל) ===");
-        Debug.WriteLine(summary);
+        Debug.WriteLine($"=== בקשה נשלחה (בדיקה בלבד): {request.ProgramName}, {request.Attachments.Count} קבצים ===");
 
         MessageBox.Show(
             this,
-            summary,
-            "הבקשה נשלחה (בדיקה בלבד - טרם חובר backend אמיתי)",
+            "הבקשה נשלחה בהצלחה (בדיקה בלבד - טרם חובר backend אמיתי)",
+            "נשלח",
             MessageBoxButton.OK,
             MessageBoxImage.Information,
             MessageBoxResult.OK,
@@ -239,6 +226,4 @@ public partial class MainWindow : Window
     }
 
     private static bool IsYes(ComboBox comboBox) => comboBox.SelectedIndex == 1;
-
-    private static string YesNoText(bool value) => value ? "כן" : "לא";
 }

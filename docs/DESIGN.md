@@ -140,7 +140,11 @@ only animate at all because the UI thread stays free during the COM call.
 Color/B&W is intentionally **not** on this object — it lives per file on
 `AttachmentItem`, per the closed design decision in the brief.
 
-### `AttachmentItem` (one per attached file)
+### `AttachmentItem` — two forms, mutable while editing vs. immutable at submit
+
+**`AttachmentItemViewModel`** (WPF project, `INotifyPropertyChanged`) — the
+mutable, bindable form backing the attachment grid while the user is still
+editing:
 
 | Field | Type | Notes |
 |---|---|---|
@@ -151,6 +155,15 @@ Color/B&W is intentionally **not** on this object — it lives per file on
 | `PageCount` | int? | **the single field the user sees and edits**, pre-filled with `DetectedPageCount` when detection succeeds (empty otherwise). Revised from an earlier two-column "detected display + separate manual override" design, which read as confusing/unintuitive in testing - one editable value is simpler to reason about than two related-but-separate numbers. Submission is blocked if this is null (user must supply a number when auto-detection fails) |
 | `PageCountStatus` | string (computed) | read-only companion label next to the editable field: "זוהה אוטומטית" if `PageCount == DetectedPageCount` and non-null, "הוזן ידנית" if the user changed/entered it, "⚠ יש להזין מספר עמודים" (shown in red/bold) if still null |
 | `ColorMode` | enum `{ Color, BlackAndWhite }` | **Defaults to `BlackAndWhite`** for every newly-attached file (revised from the original "no default" decision after hands-on UI testing showed an empty selector reads as broken rather than deliberate). Still overridable per file, and via the "mark all" buttons |
+
+**`Core.Models.AttachmentItem`** (Core project, immutable) — a plain
+submission-time snapshot built via `AttachmentItemViewModel.ToAttachmentItem()`
+once `Send` validation has confirmed `PageCount` and `ColorMode` are both set:
+`FilePath`, `FileName`, `FileKind`, `PageCount` (non-nullable `int` here — no
+longer optional once snapshotted), `ColorMode` (non-nullable). This is the
+form `PrintRequest.Attachments` holds and what the confirmation dialog and
+(eventually) the Excel/email writers consume — keeping it a plain, immutable
+POCO in Core rather than reusing the WPF ViewModel directly.
 
 ### `SubmissionResult` (returned by the submit flow, drives the result screen)
 
@@ -366,19 +379,31 @@ Single window, `FlowDirection=RightToLeft`, roughly:
 
 ### 8.2 Confirmation Dialog
 
-Modal, opened when "שלח בקשה" is clicked and validation passes. Three
-internal states within the same dialog (avoids stacking multiple popups):
+Modal, opened when "שלח בקשה" is clicked and validation passes, built from
+the `PrintRequest` object (not a pre-formatted string) so every field and
+attachment renders as its own set of elements rather than one concatenated
+block of text — mixing Hebrew, numbers, and Latin file names in a single
+text run is what caused visibly jumbled rendering in an earlier version.
+Request-level fields are a label/value grid (one row per field); attachments
+are a list, one row each, with file name / page count / color mode as
+separate `TextBlock`s in a `Grid` row (not a `StackPanel`, so a long file
+name wraps in its own bounded column instead of silently clipping).
 
-1. **Review** — read-only rendering of the entire `PrintRequest`: every
-   request-level field with its Hebrew label and current value, then a
-   table of every attachment (file name, effective page count, whether it
-   was auto-detected or manually entered, color/B&W). Two buttons:
-   "חזרה לעריכה" (back to the form, no data lost) and "אישור ושליחה"
-   (confirm & send).
-2. **Sending** — shown after confirm is clicked; buttons disabled, a busy
-   indicator and status text ("שולח הודעת דוא"ל…", then "מעדכן את קובץ
-   האקסל…") reflecting the orchestration steps in §9 as they happen.
-3. **Result** — final state, message driven by `SubmissionResult` (see
+**Currently implemented: only the Review state below** — there's no
+Outlook/Excel backend yet (that's a later phase), so confirming just shows
+a plain "sent" acknowledgement. The two additional states are the intended
+design for once that backend exists:
+
+1. **Review** *(implemented)* — read-only rendering of the entire
+   `PrintRequest`: every request-level field with its Hebrew label and
+   current value, then a row per attachment (file name, page count,
+   color/B&W). Two buttons: "חזרה לעריכה" (back to the form, no data lost)
+   and "אישור ושליחה" (confirm & send).
+2. **Sending** *(not yet built)* — shown after confirm is clicked; buttons
+   disabled, a busy indicator and status text ("שולח הודעת דוא"ל…", then
+   "מעדכן את קובץ האקסל…") reflecting the orchestration steps in §9 as they
+   happen.
+3. **Result** *(not yet built)* — final state, message driven by `SubmissionResult` (see
    §9.3 for the exact message matrix), with a "סגור" (close) button that
    returns to a blank form for the next request on success, or stays open
    on the filled form on hard failure so the user can retry.
