@@ -1,5 +1,7 @@
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Microsoft.CSharp.RuntimeBinder;
 using PrintRequestApp.Core.Models;
 
 namespace PrintRequestApp.Core.Services.PageCounting;
@@ -29,7 +31,8 @@ public sealed class WordPageCounter : IPageCounter
             var wordApplicationType = Type.GetTypeFromProgID("Word.Application");
             if (wordApplicationType is null)
             {
-                return null; // Word isn't installed/registered on this machine.
+                Debug.WriteLine("[WordPageCounter] Word.Application ProgID not found - Word not installed?");
+                return null;
             }
 
             wordApp = Activator.CreateInstance(wordApplicationType);
@@ -47,13 +50,28 @@ public sealed class WordPageCounter : IPageCounter
             // document that hasn't been repaginated since it was last edited -
             // Repaginate() first guarantees an accurate, live count (§6.2 of docs/DESIGN.md).
             document.Repaginate();
-            return (int)document.ComputedStatistics(WdStatisticPages);
+
+            try
+            {
+                // Method-call shape, passing both parameters explicitly since
+                // late-bound/IDispatch calls don't reliably support omitting the
+                // second (optional in VBA) one the way a compiled PIA would.
+                return (int)document.ComputedStatistics(WdStatisticPages, false);
+            }
+            catch (RuntimeBinderException)
+            {
+                // Some late-bound automation surfaces this as an indexed property
+                // instead of a method - try that shape before giving up entirely.
+                return (int)document.ComputedStatistics[WdStatisticPages];
+            }
         }
-        catch
+        catch (Exception ex)
         {
             // Covers Word not installed, corrupt/password-protected files, legacy
             // formats it refuses to open, etc. - falls back to manual entry like any
-            // other detection failure.
+            // other detection failure. Logged so a real failure can be diagnosed
+            // instead of silently guessed at.
+            Debug.WriteLine($"[WordPageCounter] Failed to count pages for '{filePath}': {ex}");
             return null;
         }
         finally
